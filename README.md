@@ -12,8 +12,26 @@
 
 ---
 
+
+### ฟีเจอร์หลัก (Features) 
+- ดูเมนูอาหาร
+- สั่งอาหาร
+- รวมราคา
+- ชำระเงิน
+
+
+
+---
 ## Tech Stack
-- Python All
-- postgres sql
+
+### frontend
+- Python Framework 
 - FastAPI
+
+### backend
+- Python
 - Docker
+
+### DB
+- PostgreSQL
+
