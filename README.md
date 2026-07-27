@@ -12,7 +12,7 @@
 
 ---
 
-## Full Stack
+## Tech Stack
 - Python All
 - postgres sql
 - FastAPI
