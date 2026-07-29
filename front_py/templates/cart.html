@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+
+<div id="cart-container" class="cart-container">
+    <!-- JS จะเติมรายการในตะกร้าตรงนี้ -->
+</div>
+
+<div class="cart-summary">
+    <p>ยอดรวมทั้งหมด: <span id="cart-total">0</span> บาท</p>
+    <button class="btn-checkout" onclick="cart.checkout()">ยืนยันสั่งซื้อ</button>
+    <button class="btn-clear" onclick="cart.clearCart()">ล้างตะกร้า</button>
+</div>
+{% endblock %}
