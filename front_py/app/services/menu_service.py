@@ -14,6 +14,12 @@ class MenuService:
             MenuItem(4, "ส้มตำไทย", 50, "1695118621402.jpg", "ยำสลัด"),
             MenuItem(5, "แกงเขียวหวานไก่", 90, "bafb1ee2-be6b-4293-bf87-eddad7f11fc1.jpg", "ต้มแกง"),
             MenuItem(6, "ชาไทยเย็น", 35, "ชาไทยไม่ใส่สี-3_0-1024x1024.jpg", "เครื่องดื่ม"),
+            MenuItem(7, "ผัดกะเพราหมูสับ", 55, "pad_kra_pao.jpg", "จานเดียว"),
+            MenuItem(8, "ข้าวมันไก่", 50, "khao_man_gai.jpg", "จานเดียว"),
+            MenuItem(9, "แกงส้มผักรวม", 70, "kaeng_som.jpg", "ต้มแกง"),
+            MenuItem(10, "ยำวุ้นเส้น", 65, "yam_woonsen.jpg", "ยำสลัด"),
+            MenuItem(11, "น้ำมะนาวโซดา", 30, "nam_manao.jpg", "เครื่องดื่ม"),
+            MenuItem(12, "กล้วยทอด", 40, "kluay_tod.jpg", "ของหวาน"),
         ]
 
     def get_all(self) -> list[MenuItem]:

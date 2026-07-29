@@ -157,7 +157,7 @@ h1 {
     gap: 10px;
 }
 
-.cart-item-controls button {
+.cart-item-controls button:not(.btn-remove) {
     background: #eee;
     border: none;
     width: 28px;
@@ -170,6 +170,10 @@ h1 {
 .btn-remove {
     background: #fdecea;
     color: #d9480f;
+    width: auto;        
+    height: auto;
+    padding: 6px 14px;  
+    white-space: nowrap; 
 }
 
 .cart-summary {
@@ -251,4 +255,15 @@ h1 {
 
 .admin-table th {
     background: #f0f0f0;
+}
+
+.navbar nav a {
+    padding: 6px 12px;
+    border-radius: 6px;
+    transition: background-color 0.2s ease, transform 0.15s ease;
+}
+
+.navbar nav a:hover {
+    background-color: rgba(255, 255, 255, 0.15);
+    transform: translateY(-1px);
 }
