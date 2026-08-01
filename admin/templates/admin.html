@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="container">
+    <header class="navbar">
+        <a href="/" class="logo">🛠️ Admin - จัดการเมนู</a>
+    </header>
+
+    <main class="container">
+        <h1>{{ title }}</h1>
+
+        <div class="admin-form">
+            <h2>เพิ่มเมนูใหม่</h2>
+            <form action="/add" method="post" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label>ชื่อเมนู</label>
+                    <input type="text" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label>ราคา (บาท)</label>
+                    <input type="number" name="price" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label>หมวดหมู่</label>
+                    <input type="text" name="category" required placeholder="เช่น จานเดียว, ต้มแกง (ห้ามมี /)">
+                </div>
+                <div class="form-group">
+                    <label>รูปภาพ</label>
+                    <input type="file" name="image" accept="image/*">
+                </div>
+                <button type="submit" class="btn-add">เพิ่มเมนู</button>
+            </form>
+        </div>
+
+        <h2>รายการเมนูทั้งหมด</h2>
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>รูป</th>
+                    <th>ชื่อ</th>
+                    <th>ราคา</th>
+                    <th>หมวดหมู่</th>
+                    <th>จัดการ</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr>
+                    <td>{{ item.id }}</td>
+                    <td><img src="/media/{{ item.image }}" width="60" height="60"
+                             style="object-fit:cover;border-radius:6px;"
+                             onerror="this.src='https://placehold.co/60x60'"></td>
+                    <td>{{ item.name }}</td>
+                    <td>{{ item.price }} บาท</td>
+                    <td>{{ item.category }}</td>
+                    <td>
+                        <a href="/edit/{{ item.id }}">แก้ไข</a>
+                        <form action="/delete/{{ item.id }}" method="post" style="display:inline"
+                              onsubmit="return confirm('ยืนยันลบเมนูนี้?');">
+                            <button type="submit" class="btn-remove">ลบ</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="6">ยังไม่มีเมนู</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </main>
+</div>
+</body>
+</html>

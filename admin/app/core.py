@@ -1,6 +1,8 @@
 import os
+
+
 class Settings:
-  r"""เก็บค่า config รวมศูนย์ของAdmin (ตอนนี้ยังไม่ผูกกับ User app)
+    r"""เก็บค่า config รวมศูนย์ของAdmin (ตอนนี้ยังไม่ผูกกับ User app)
 
     ตำแหน่งไฟล์ข้อมูล (MENU_DATA_DIR) ตั้งค่าผ่าน environment variable ได้
     ถ้าไม่ตั้งจะใช้โฟลเดอร์ data/ ที่อยู่ในโปรเจกต์นี้เป็นค่าเริ่มต้น

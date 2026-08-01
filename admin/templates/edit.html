@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="container">
+    <header class="navbar">
+        <a href="/" class="logo">🛠️ Admin - จัดการเมนู</a>
+    </header>
+
+    <main class="container">
+        <h1>{{ title }}</h1>
+        <div class="admin-form">
+            <form action="/edit/{{ item.id }}" method="post" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label>ชื่อเมนู</label>
+                    <input type="text" name="name" value="{{ item.name }}" required>
+                </div>
+                <div class="form-group">
+                    <label>ราคา (บาท)</label>
+                    <input type="number" name="price" step="0.01" value="{{ item.price }}" required>
+                </div>
+                <div class="form-group">
+                    <label>หมวดหมู่</label>
+                    <input type="text" name="category" value="{{ item.category }}" required>
+                </div>
+                <div class="form-group">
+                    <label>รูปปัจจุบัน</label><br>
+                    <img src="/media/{{ item.image }}" width="80" height="80"
+                         style="object-fit:cover;border-radius:6px;"
+                         onerror="this.src='https://placehold.co/80x80'">
+                </div>
+                <div class="form-group">
+                    <label>เปลี่ยนรูป (ไม่บังคับ)</label>
+                    <input type="file" name="image" accept="image/*">
+                </div>
+                <button type="submit" class="btn-add">บันทึกการแก้ไข</button>
+            </form>
+            <a href="/" class="back-link">← กลับหน้ารายการ</a>
+        </div>
+    </main>
+</div>
+</body>
+</html>
