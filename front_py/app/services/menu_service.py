@@ -29,7 +29,7 @@ class MenuService:
         return [item for item in self._menu_items if item.category == category]
 
     def get_by_id(self, item_id: int) -> MenuItem | None:
-        return next((item for item in self._menu_items if item.id == item_id), None)
+        return next((item for item in self._menu_items if str(item.id) == str(item_id)), None)
 
     def get_categories(self) -> list[str]:
         # เอาหมวดหมู่ทั้งหมดแบบไม่ซ้ำ คงลำดับการเจอครั้งแรก
