@@ -35,3 +35,8 @@
 ### DB
 - PostgreSQL
 
+### วิธีรันโปรเจกต์
+1. ติดตั้งไลบรารีที่จำเป็นทั้งหมดก่อน: 
+   `pip install -r requirements.txt`
+2. สั่งรันเซิร์ฟเวอร์: 
+   `uvicorn main:app --reload`
