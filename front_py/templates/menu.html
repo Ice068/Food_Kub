@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+
+<div class="category-bar">
+    <a href="/" class="category-chip">ทั้งหมด</a>
+    {% for cat in categories %}
+    <a href="/category/{{ cat }}" class="category-chip">{{ cat }}</a>
+    {% endfor %}
+</div>
+
+<div class="menu-grid">
+    {% for item in items %}
+    <div class="menu-card">
+        <div class="menu-card-image">
+            <img src="/static/images/{{ item.image }}" alt="{{ item.name }}">
+        </div>
+        <div class="menu-card-body">
+            <h3>{{ item.name }}</h3>
+            <p class="menu-price">{{ item.price }} บาท</p>
+            <form action="/cart/add/{{ item.id }}" method="post">
+                <button type="submit" class="btn-add">เพิ่มลงตะกร้า</button>
+            </form>
+        </div>
+    </div>
+    {% else %}
+    <p>ไม่มีเมนูในหมวดหมู่นี้</p>
+    {% endfor %}
+</div>
+{% endblock %}
