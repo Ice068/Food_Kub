@@ -20,8 +20,8 @@ class MenuRouter:
         self.router.add_api_route("/category/{category}", self.show_by_category, methods=["GET"])
 
     async def show_menu(self, request: Request):
-        items = [item.to_dict() for item in self.menu_service.get_all()]
-        categories = self.menu_service.get_categories()
+        items = [item.to_dict() for item in await self.menu_service.get_all()]
+        categories = await self.menu_service.get_categories()
         return self.template_service.render(
             request,
             "menu.html",
@@ -34,8 +34,8 @@ class MenuRouter:
         )
 
     async def show_by_category(self, request: Request, category: str):
-        items = [item.to_dict() for item in self.menu_service.get_by_category(category)]
-        categories = self.menu_service.get_categories()
+        items = [item.to_dict() for item in await self.menu_service.get_by_category(category)]
+        categories = await self.menu_service.get_categories()
         return self.template_service.render(
             request,
             "menu.html",

@@ -25,7 +25,7 @@ class AdminRouter:
         self.router.add_api_route("/delete/{item_id}", self.delete_menu, methods=["POST"])
 
     async def show_admin_page(self, request: Request):
-        items = [item.to_dict() for item in self.menu_service.get_all()]
+        items = [item.to_dict() for item in await self.menu_service.get_all()]
         return self.template_service.render(
             request, "admin.html", {"title": "จัดการเมนู (Admin)", "items": items}
         )
@@ -48,9 +48,9 @@ class AdminRouter:
                 content = await image.read()
                 f.write(content)
 
-        self.menu_service.add_item(name, price, image_filename, category)
+        await self.menu_service.add_item(name, price, image_filename, category)
         return RedirectResponse(url="/admin/", status_code=303)
 
     async def delete_menu(self, item_id: int):
-        self.menu_service.delete_item(item_id)
+        await self.menu_service.delete_item(item_id)
         return RedirectResponse(url="/admin/", status_code=303)

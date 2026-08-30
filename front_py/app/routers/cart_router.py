@@ -61,7 +61,7 @@ class CartRouter:
         total = 0
 
         for item_id, qty in cart.items():
-            menu_item = self.menu_service.get_by_id(int(item_id))
+            menu_item = await self.menu_service.get_by_id(int(item_id))
 
             if menu_item:
                 total += menu_item.price * qty
