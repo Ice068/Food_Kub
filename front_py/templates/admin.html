@@ -8,8 +8,10 @@
 </head>
 <body>
 <div class="container">
-    <header class="navbar">
-        <a href="/" class="logo">🛠️ Admin - จัดการเมนู</a>
+    <!-- แก้ไข Header: จัดให้อยู่ซ้ายขวา และเพิ่มปุ่ม Logout -->
+    <header class="navbar" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 20px;">
+        <a href="/admin/" class="logo">🛠️ Admin - จัดการเมนู</a>
+        <a href="/admin/logout" style="color: white; background-color: #333; padding: 8px 15px; text-decoration: none; border-radius: 5px; font-size: 14px;">ออกจากระบบ 🚪</a>
     </header>
 
     <main class="container">
@@ -17,8 +19,8 @@
 
         <div class="admin-form">
             <h2>เพิ่มเมนูใหม่</h2>
-            <!-- เพิ่ม enctype="multipart/form-data" เพื่อให้ส่งไฟล์รูปภาพได้ -->
-            <form action="/add" method="post" enctype="multipart/form-data">
+            <!-- แก้ action ให้มี /admin นำหน้าเพื่อให้ตรงกับ Router -->
+            <form action="/admin/add" method="post" enctype="multipart/form-data">
                 <div class="form-group">
                     <label>ชื่อเมนู</label>
                     <input type="text" name="name" required>
@@ -45,7 +47,6 @@
                 
                 <div class="form-group">
                     <label>รูปภาพ</label>
-                    <!-- เปลี่ยนเป็น type="file" เพื่อให้อัปโหลดรูปได้ -->
                     <input type="file" name="image" accept="image/*">
                 </div>
                 
@@ -77,7 +78,8 @@
                     <td>{{ item.category }}</td>
                     <td>
                         <span style="color: gray">แก้ไข (เร็วๆ นี้)</span>
-                        <form action="/delete/{{ item.id }}" method="post" style="display:inline"
+                        <!-- แก้ action ให้มี /admin นำหน้าเพื่อให้ตรงกับ Router -->
+                        <form action="/admin/delete/{{ item.id }}" method="post" style="display:inline"
                               onsubmit="return confirm('ยืนยันลบเมนูนี้?');">
                             <button type="submit" class="btn-remove">ลบ</button>
                         </form>
