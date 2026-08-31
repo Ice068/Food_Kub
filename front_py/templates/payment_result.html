@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="result-container">
+    {% if error %}
+    <div class="result-card result-error">
+        <h2>❌ ทำรายการไม่สำเร็จ</h2>
+        <p>{{ error }}</p>
+        <a href="/checkout" class="btn-checkout">ลองอีกครั้ง</a>
+    </div>
+
+    {% else %}
+    <div class="result-card">
+        <h2>✅ รับออเดอร์แล้ว</h2>
+        <p class="result-method">วิธีชำระเงิน: <strong>{{ result.method_name }}</strong></p>
+        <p class="result-amount">{{ "%.2f"|format(result.amount) }} บาท</p>
+        <p class="result-message">{{ result.message }}</p>
+
+        {% if result.qr_image %}
+        <img class="qr-image"
+             src="data:image/png;base64,{{ result.qr_image }}"
+             alt="QR Code พร้อมเพย์">
+        <p class="qr-hint">เปิดแอปธนาคาร แล้วสแกน QR นี้ ยอดเงินจะขึ้นให้อัตโนมัติ</p>
+        {% endif %}
+
+        <form action="/cart/clear" method="post">
+            <button type="submit" class="btn-checkout">เสร็จสิ้น (ล้างตะกร้า)</button>
+        </form>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

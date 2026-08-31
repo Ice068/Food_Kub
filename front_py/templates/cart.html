@@ -32,6 +32,9 @@
 
     <div class="cart-summary">
         <p>ยอดรวมทั้งหมด: {{ total }} บาท</p>
+        {% if cart_items %}
+        <a href="/checkout" class="btn-checkout">ชำระเงิน</a>
+        {% endif %}
         <form action="/cart/clear" method="post">
             <button type="submit" class="btn-clear">ล้างตะกร้า</button>
         </form>

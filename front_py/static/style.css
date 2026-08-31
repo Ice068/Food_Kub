@@ -267,3 +267,115 @@ h1 {
     background-color: rgba(255, 255, 255, 0.15);
     transform: translateY(-1px);
 }
+/* ---------- หน้าชำระเงิน (checkout) ---------- */
+
+.checkout-container h2 {
+    margin: 24px 0 12px;
+    font-size: 1.15rem;
+}
+
+.checkout-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.checkout-table th, .checkout-table td {
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+}
+
+.checkout-table thead th, .checkout-table tfoot th {
+    background: #f0f0f0;
+}
+
+.payment-form {
+    background: #fff;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.payment-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.payment-option:hover {
+    border-color: #2b8a3e;
+    background: #f6fbf7;
+}
+
+.checkout-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.btn-checkout, .btn-back {
+    display: inline-block;
+    padding: 10px 18px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.btn-back {
+    background: #eee;
+    color: #333;
+}
+
+/* ---------- หน้าผลการชำระเงิน ---------- */
+
+.result-card {
+    background: #fff;
+    padding: 28px;
+    border-radius: 12px;
+    max-width: 420px;
+    margin: 24px auto;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.result-error h2 {
+    color: #c92a2a;
+}
+
+.result-amount {
+    font-size: 1.6rem;
+    font-weight: bold;
+    color: #2b8a3e;
+    margin: 8px 0;
+}
+
+.result-method, .result-message {
+    color: #555;
+}
+
+.qr-image {
+    width: 240px;
+    height: 240px;
+    margin: 18px auto 6px;
+    display: block;
+    border: 1px solid #eee;
+    border-radius: 8px;
+}
+
+.qr-hint {
+    font-size: 0.85rem;
+    color: #888;
+    margin-bottom: 16px;
+}

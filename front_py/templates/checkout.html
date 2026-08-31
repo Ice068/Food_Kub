@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="checkout-container">
+    <h2>สรุปรายการสั่งซื้อ</h2>
+
+    <table class="checkout-table">
+        <thead>
+            <tr>
+                <th>รายการ</th>
+                <th>จำนวน</th>
+                <th>ราคา</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td>{{ item.name }}</td>
+                <td>{{ item.qty }}</td>
+                <td>{{ "%.2f"|format(item.price * item.qty) }} บาท</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <th colspan="2">ยอดรวมทั้งหมด</th>
+                <th>{{ "%.2f"|format(total) }} บาท</th>
+            </tr>
+        </tfoot>
+    </table>
+
+    <h2>เลือกวิธีชำระเงิน</h2>
+
+    <form action="/checkout/pay" method="post" class="payment-form">
+        {% for m in methods %}
+        <label class="payment-option">
+            <input type="radio" name="method" value="{{ m.id }}"
+                   {% if loop.first %}checked{% endif %}>
+            <span>{{ m.name }}</span>
+        </label>
+        {% endfor %}
+
+        <div class="checkout-actions">
+            <button type="submit" class="btn-checkout">ยืนยันการชำระเงิน</button>
+            <a href="/cart" class="btn-back">กลับไปแก้ตะกร้า</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
