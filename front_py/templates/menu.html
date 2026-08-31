@@ -14,7 +14,11 @@
     {% for item in items %}
     <div class="menu-card">
         <div class="menu-card-image">
-            <img src="/static/images/{{ item.image }}" alt="{{ item.name }}">
+            {% if "://" in item.image %}
+            <img src="{{ item.image }}" alt="{{ item.name }}" onerror="this.src='https://placehold.co/300x200?text=Food'">
+            {% else %}
+            <img src="/static/images/{{ item.image }}" alt="{{ item.name }}" onerror="this.src='https://placehold.co/300x200?text=Food'">
+            {% endif %}
         </div>
         <div class="menu-card-body">
             <h3>{{ item.name }}</h3>

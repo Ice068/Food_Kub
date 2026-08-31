@@ -6,6 +6,7 @@ from fastapi.responses import RedirectResponse
 
 from app.services.menu_service import MenuService
 from app.services.template_service import TemplateService
+from app.core.storage import upload_image_to_cloud
 
 
 class AdminRouter:
@@ -37,18 +38,24 @@ class AdminRouter:
         category: str = Form(...),
         image: UploadFile = File(None),
     ):
-        image_filename = "default.jpg"  # ค่าเริ่มต้นถ้าไม่ได้อัปโหลดรูป
-
+        image_result = "default.jpg"
         if image and image.filename:
-            # ตั้งชื่อไฟล์ใหม่แบบสุ่ม กันชื่อซ้ำ
-            ext = os.path.splitext(image.filename)[1]
-            image_filename = f"{uuid.uuid4().hex}{ext}"
-            save_path = os.path.join(self.IMAGE_DIR, image_filename)
-            with open(save_path, "wb") as f:
-                content = await image.read()
-                f.write(content)
+            content = await image.read()
+            # ลองอัปโหลดขึ้น Cloud Storage
+            cloud_url = await upload_image_to_cloud(content, image.filename)
+            if cloud_url:
+                image_result = cloud_url
+            else:
+                # Fallback: บันทึกลงเครื่องหากเกิดข้อผิดพลาด
+                os.makedirs(self.IMAGE_DIR, exist_ok=True)
+                ext = os.path.splitext(image.filename)[1]
+                image_filename = f"{uuid.uuid4().hex}{ext}"
+                save_path = os.path.join(self.IMAGE_DIR, image_filename)
+                with open(save_path, "wb") as f:
+                    f.write(content)
+                image_result = image_filename
 
-        await self.menu_service.add_item(name, price, image_filename, category)
+        await self.menu_service.add_item(name, price, image_result, category)
         return RedirectResponse(url="/admin/", status_code=303)
 
     async def delete_menu(self, item_id: int):
