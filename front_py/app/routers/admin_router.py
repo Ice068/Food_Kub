@@ -9,20 +9,63 @@ from app.services.template_service import TemplateService
 
 
 class AdminRouter:
-    """หน้าที่ของ Admin: ดูรายการเมนูทั้งหมด, เพิ่มเมนูใหม่, ลบเมนู"""
+    """หน้าที่ของ Admin: ล็อกอิน, ดูรายการเมนูทั้งหมด, เพิ่มเมนูใหม่, ลบเมนู"""
 
     IMAGE_DIR = "static/images"
 
     def __init__(self, menu_service: MenuService, template_service: TemplateService):
+        # สร้าง Router โดยให้ prefix เริ่มที่ /admin เหมือนเดิม
         self.router = APIRouter(prefix="/admin")
         self.menu_service = menu_service
         self.template_service = template_service
         self._register_routes()
 
     def _register_routes(self):
+        # ---- หน้าจัดการเมนูเดิม (อาจต้องเช็คว่าล็อกอินหรือยังในอนาคต) ----
         self.router.add_api_route("/", self.show_admin_page, methods=["GET"])
         self.router.add_api_route("/add", self.add_menu, methods=["POST"])
         self.router.add_api_route("/delete/{item_id}", self.delete_menu, methods=["POST"])
+        
+        # ---- เพิ่ม Route สำหรับ Login เข้ามาใหม่ ----
+        self.router.add_api_route("/login", self.show_login_page, methods=["GET"])
+        self.router.add_api_route("/login", self.process_login, methods=["POST"])
+
+    # 1. ฟังก์ชันแสดงหน้าเว็บ login.html
+    async def show_login_page(self, request: Request):
+        return self.template_service.render(
+            request, "login.html", {"title": "เข้าสู่ระบบ (Admin)"}
+        )
+
+    # 2. ฟังก์ชันรับข้อมูล Username/Password จากหน้าเว็บ
+    async def process_login(
+        self, 
+        request: Request, 
+        username: str = Form(...), 
+        password: str = Form(...)
+    ):
+        # ตัวอย่างการตรวจสอบรหัสผ่าน (ของจริงควรเช็คจาก Database)
+        if username == "admin" and password == "123456":
+            
+            # ถ้ารหัสถูก ให้เด้งกลับไปหน้าจอหลักของ Admin
+            response = RedirectResponse(url="/admin/", status_code=303)
+            
+            # 💡 TODO: อนาคตควรเพิ่มโค้ดฝัง Cookie/Session ตรงนี้
+            # response.set_cookie(key="is_admin", value="true")
+            
+            return response
+            
+        else:
+            # ถ้ารหัสผิด ให้แสดงหน้า login เหมือนเดิม และส่งตัวแปร error ไปโชว์
+            return self.template_service.render(
+                request, 
+                "login.html", 
+                {
+                    "title": "เข้าสู่ระบบ (Admin)", 
+                    "error": "❌ ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง"
+                }
+            )
+
+    # ----------- (โค้ดเดิมด้านล่างนี้เหมือนเดิมทุกประการ) -----------
 
     async def show_admin_page(self, request: Request):
         items = [item.to_dict() for item in await self.menu_service.get_all()]
