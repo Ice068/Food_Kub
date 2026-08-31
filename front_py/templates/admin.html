@@ -70,7 +70,7 @@
                 {% for item in items %}
                 <tr>
                     <td>{{ item.id }}</td>
-                    <td><img src="/static/images/{{ item.image }}" width="60" height="60"
+                    <td><img src="{{ item.image_url }}" width="60" height="60"
                              style="object-fit:cover;border-radius:6px;"
                              onerror="this.src='https://placehold.co/60x60'"></td> 
                     <td>{{ item.name }}</td>
