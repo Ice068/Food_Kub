@@ -13,7 +13,7 @@
             <a href="/">เมนู</a>
             <a href="/cart" class="cart-link">
                 🛒 ตะกร้า
-                <span id="cart-count" class="cart-badge">0</span>
+                <span id="cart-count" class="cart-badge">{{ cart_count | default(0) }}</span>
             </a>
         </nav>
     </header>
@@ -25,7 +25,5 @@
     <footer class="footer">
         <p>&copy; 2026 ระบบสั่งอาหาร — ตัวอย่างโปรเจกต์ FastAPI (OOP)</p>
     </footer>
-
-    <script src="/static/script.js"></script>
 </body>
 </html>
