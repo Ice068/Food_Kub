@@ -1,5 +1,29 @@
 <!DOCTYPE html>
 <html lang="th">
+{% block extra_head %}{% endblock %}
+
+<style>
+    .navbar {
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    .navbar nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .navbar nav a {
+        margin-left: 0;
+    }
+
+    @media (max-width: 600px) {
+        .navbar {
+            padding: 16px;
+        }
+    }
+</style>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,9 +35,14 @@
         <a href="/" class="logo">🍽️ Food Kub</a>
         <nav>
             <a href="/">เมนู</a>
+            <a href="/#recommended">เมนูแนะนำ</a>
+            <a href="/random">วงล้ออาหาร</a>
+
             <a href="/cart" class="cart-link">
                 🛒 ตะกร้า
-                <span id="cart-count" class="cart-badge">{{ cart_count | default(0) }}</span>
+                <span id="cart-count" class="cart-badge">
+                    {{ cart_count | default(0) }}
+                </span>
             </a>
         </nav>
     </header>
