@@ -5,15 +5,47 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ title }} | ระบบสั่งอาหาร</title>
     <link rel="stylesheet" href="/static/style.css">
+
+    <style>
+        .navbar {
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .navbar nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .navbar nav a {
+            margin-left: 0;
+        }
+
+        @media (max-width: 600px) {
+            .navbar {
+                padding: 16px;
+            }
+        }
+    </style>
+
+    {% block extra_head %}{% endblock %}
 </head>
+
 <body>
     <header class="navbar">
         <a href="/{{ table_query }}" class="logo">🍽️ Food Kub</a>
+
         <nav>
             <a href="/{{ table_query }}">เมนู</a>
+            <a href="/{{ table_query }}#recommended">เมนูแนะนำ</a>
+            <a href="/random{{ table_query }}">วงล้ออาหาร</a>
+
             <a href="/cart{{ table_query }}" class="cart-link">
                 🛒 ตะกร้า
-                <span id="cart-count" class="cart-badge">{{ cart_count | default(0) }}</span>
+                <span id="cart-count" class="cart-badge">
+                    {{ cart_count | default(0) }}
+                </span>
             </a>
         </nav>
     </header>
@@ -26,6 +58,7 @@
             ยังไม่ได้ระบุโต๊ะ กรุณาสแกน QR Code ที่โต๊ะของคุณ
             {% endif %}
         </div>
+
         {% block content %}{% endblock %}
     </main>
 

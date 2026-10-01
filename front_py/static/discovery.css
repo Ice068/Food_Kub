@@ -1,0 +1,393 @@
+.discovery-hero {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 24px;
+    padding: 28px;
+    margin-bottom: 30px;
+    background: #fff0e6;
+    border: 1px solid #ffdcc4;
+    border-radius: 20px;
+}
+
+.discovery-hero h1 {
+    margin: 8px 0;
+    font-size: clamp(1.65rem, 4vw, 2.35rem);
+}
+
+.discovery-hero p:not(.eyebrow) {
+    color: #66564c;
+    line-height: 1.7;
+}
+
+.eyebrow {
+    color: #a73b0c;
+    font-weight: 700;
+    font-size: 0.78rem;
+    letter-spacing: 0.06em;
+}
+
+.discovery-link,
+.discovery-back {
+    text-decoration: none;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.discovery-link {
+    padding: 13px 18px;
+    background: #d9480f;
+    color: white;
+    border-radius: 12px;
+}
+
+.discovery-back {
+    color: #a73b0c;
+}
+
+.recommended-section {
+    margin-bottom: 38px;
+    scroll-margin-top: 20px;
+}
+
+.section-heading {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.section-heading h2 {
+    margin-top: 5px;
+}
+
+.section-heading > span {
+    color: #716860;
+    font-size: 0.9rem;
+}
+
+.all-menu-heading {
+    margin-bottom: 16px;
+}
+
+.category-chip.is-active {
+    background: #d9480f;
+    color: white;
+    border-color: #d9480f;
+}
+
+.food-category {
+    margin-top: 4px;
+    color: #716860;
+    font-size: 0.85rem;
+}
+
+.food-placeholder {
+    height: 160px;
+    display: grid;
+    place-items: center;
+    background: #fff0e6;
+    font-size: 3rem;
+}
+
+.discovery-notice {
+    padding: 20px;
+    background: #fff3cd;
+    color: #664d03;
+    border-radius: 12px;
+    line-height: 1.8;
+}
+
+.discovery-notice a {
+    color: inherit;
+    font-weight: bold;
+    margin-left: 8px;
+}
+
+.random-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    gap: 26px;
+    align-items: start;
+}
+
+.wheel-panel,
+.wheel-legend,
+.result-intro {
+    background: #fff;
+    padding: 24px;
+    border: 1px solid #eae3df;
+    border-radius: 18px;
+}
+
+.wheel-filter label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.filter-row {
+    display: flex;
+    gap: 8px;
+}
+
+.filter-row select {
+    flex: 1;
+    min-width: 0;
+    padding: 11px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background: white;
+    font: inherit;
+}
+
+.filter-button {
+    padding: 10px 14px;
+    border: 1px solid #d9480f;
+    color: #a73b0c;
+    background: #fff6ef;
+    border-radius: 8px;
+    font: inherit;
+    cursor: pointer;
+}
+
+.wheel-stage {
+    position: relative;
+    width: min(100%, 350px);
+    aspect-ratio: 1;
+    margin: 32px auto 24px;
+}
+
+.food-wheel {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    border-radius: 50%;
+    border: 7px solid #fff;
+    outline: 3px solid #e8d9ce;
+    box-shadow: 0 8px 24px #5e31151a;
+}
+
+.wheel-pointer {
+    position: absolute;
+    top: -9px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 13px solid transparent;
+    border-right: 13px solid transparent;
+    border-top: 30px solid #342920;
+    z-index: 3;
+}
+
+.wheel-number {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 29px;
+    height: 29px;
+    margin: -14.5px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: white;
+    color: #342920;
+    font-weight: 800;
+    transform:
+        rotate(var(--label-angle))
+        translateY(-115px)
+        rotate(calc(-1 * var(--label-angle)));
+    box-shadow: 0 1px 3px #0002;
+}
+
+.wheel-center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 86px;
+    height: 86px;
+    border-radius: 50%;
+    background: white;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    line-height: 1.3;
+    box-shadow: 0 2px 10px #0002;
+    text-align: center;
+}
+
+.food-wheel.is-spinning {
+    animation: food-spin 4s cubic-bezier(0.14, 0.65, 0.15, 1) forwards;
+}
+
+@keyframes food-spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(var(--stop-angle));
+    }
+}
+
+.spin-button {
+    width: 100%;
+    padding: 14px;
+    border: 0;
+    border-radius: 12px;
+    background: #d9480f;
+    color: white;
+    font: inherit;
+    font-size: 1.12rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.spin-button:hover,
+.discovery-link:hover {
+    background: #b8380a;
+}
+
+.wheel-help {
+    color: #74675d;
+    font-size: 0.82rem;
+    line-height: 1.7;
+    text-align: center;
+    margin-top: 12px;
+}
+
+.wheel-details {
+    display: grid;
+    gap: 20px;
+    min-width: 0;
+}
+
+.wheel-result h2 {
+    font-size: 1.3rem;
+    margin: 6px 0 12px;
+    overflow-wrap: anywhere;
+}
+
+.wheel-result .menu-card-image img {
+    height: 190px;
+}
+
+/* แสดงผลเมื่อวงล้อหมุนครบ 4 วินาที */
+.reveal-result {
+    visibility: hidden;
+    animation: food-reveal 0s 4s forwards;
+}
+
+@keyframes food-reveal {
+    to {
+        visibility: visible;
+    }
+}
+
+.result-intro h2 {
+    margin: 8px 0;
+}
+
+.result-intro p {
+    line-height: 1.8;
+}
+
+.wheel-legend h2 {
+    font-size: 1.1rem;
+    margin-bottom: 12px;
+}
+
+.wheel-legend ol {
+    padding-left: 28px;
+}
+
+.wheel-legend li {
+    padding: 8px 0 8px 3px;
+    border-bottom: 1px solid #f1ece8;
+    font-size: 0.92rem;
+}
+
+.wheel-legend li span {
+    overflow-wrap: anywhere;
+}
+
+.wheel-legend li strong {
+    white-space: nowrap;
+    margin-left: 12px;
+    color: #a73b0c;
+    font-size: 0.85rem;
+}
+
+.wheel-empty {
+    padding: 40px 0;
+    text-align: center;
+    line-height: 1.9;
+}
+
+.wheel-empty > span {
+    font-size: 3rem;
+}
+
+.wheel-empty a {
+    color: #a73b0c;
+}
+
+a:focus-visible,
+button:focus-visible,
+select:focus-visible {
+    outline: 3px solid #1967d2;
+    outline-offset: 3px;
+}
+
+@media (max-width: 760px) {
+    .random-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .discovery-hero {
+        align-items: flex-start;
+        flex-direction: column;
+        padding: 22px;
+    }
+
+    .section-heading {
+        align-items: start;
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 400px) {
+    .wheel-panel {
+        padding: 16px;
+    }
+
+    .wheel-number {
+        transform:
+            rotate(var(--label-angle))
+            translateY(-90px)
+            rotate(calc(-1 * var(--label-angle)));
+    }
+
+    .wheel-center {
+        width: 70px;
+        height: 70px;
+        font-size: 0.85rem;
+    }
+}
+
+/* ผู้ใช้ที่ตั้งค่าลดการเคลื่อนไหวจะเห็นผลทันที */
+@media (prefers-reduced-motion: reduce) {
+    .food-wheel.is-spinning {
+        animation: none;
+        transform: rotate(var(--stop-angle));
+    }
+
+    .reveal-result {
+        visibility: visible;
+        animation: none;
+    }
+}

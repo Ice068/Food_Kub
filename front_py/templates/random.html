@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% from "partials/food_card.html" import food_card %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="/static/discovery.css">
+{% endblock %}
+
+{% block content %}
+<section class="discovery-hero">
+    <div>
+        <p class="eyebrow">FOOD KUB • ให้มื้อนี้มีคำตอบ</p>
+        <h1>วันนี้กินอะไรดี?</h1>
+        <p>เลือกหมวดที่อยากกิน แล้วให้วงล้อช่วยตัดสินใจ</p>
+    </div>
+
+    <a class="discovery-back" href="/">← กลับไปดูเมนู</a>
+</section>
+
+{% if error %}
+<div class="discovery-notice" role="alert">
+    {{ error }}
+    <a href="/random">ลองใหม่</a>
+</div>
+{% else %}
+
+<div class="random-layout">
+    <section class="wheel-panel" aria-label="วงล้อสุ่มอาหาร">
+        <form action="/random{{ table_query }}" method="get" class="wheel-filter">
+            <label for="wheel-category">สุ่มจากหมวด</label>
+
+            <div class="filter-row">
+                <select id="wheel-category" name="category">
+                    <option value="">ทั้งหมด</option>
+
+                    {% for cat in categories %}
+                    <option
+                        value="{{ cat }}"
+                        {% if cat == selected_category %}selected{% endif %}
+                    >{{ cat }}</option>
+                    {% endfor %}
+                </select>
+
+                <button class="filter-button" type="submit">
+                    เลือกหมวด
+                </button>
+            </div>
+        </form>
+
+        {% if wheel_items %}
+        <div class="wheel-stage" aria-hidden="true">
+            <div class="wheel-pointer"></div>
+
+            <div
+                class="food-wheel {% if spinning %}is-spinning{% endif %}"
+                style="background: {{ gradient }}; --stop-angle: {{ rotation }}deg;"
+            >
+                {% for segment in segments %}
+                <span
+                    class="wheel-number"
+                    style="--label-angle: {{ segment.angle }}deg;"
+                >{{ segment.number }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="wheel-center">
+                กินอะไร<br><strong>ดีนะ?</strong>
+            </div>
+        </div>
+
+        <form action="/random{{ table_query }}" method="post">
+            <input
+                type="hidden"
+                name="category"
+                value="{{ selected_category }}"
+            >
+
+            <button class="spin-button" type="submit">
+                {% if winner %}หมุนอีกครั้ง{% else %}หมุนวงล้อ{% endif %}
+                ↻
+            </button>
+        </form>
+
+        <p class="wheel-help">
+            กดหมุนแล้วหน้าเว็บจะโหลดใหม่
+            ก่อนวงล้อหมุนประมาณ 4 วินาที
+        </p>
+
+        {% if pool_count > wheel_items|length %}
+        <p class="wheel-help">
+            มี {{ pool_count }} เมนู •
+            สุ่มเข้าวงล้อครั้งละ {{ wheel_items|length }} เมนู
+            ทุกเมนูมีโอกาสเท่ากัน
+        </p>
+        {% endif %}
+
+        {% else %}
+        <div class="wheel-empty">
+            <span>🍽️</span>
+            <h2>ไม่พบเมนูในหมวดนี้</h2>
+            <p>ลองเลือกหมวดอื่น หรือกลับมาดูใหม่ภายหลัง</p>
+            <a href="/random">ดูทุกหมวด</a>
+        </div>
+        {% endif %}
+    </section>
+
+    <aside class="wheel-details">
+        {% if winner %}
+        <section
+            class="wheel-result {% if spinning %}reveal-result{% endif %}"
+            aria-label="ผลการสุ่ม"
+        >
+            <p class="eyebrow">มื้อนี้ได้คำตอบแล้ว</p>
+            <h2>ช่อง {{ winner_index + 1 }} • {{ winner.name }}</h2>
+
+            {{ food_card(winner) }}
+        </section>
+        {% else %}
+        <div class="result-intro">
+            <p class="eyebrow">ไม่ต้องคิดนาน</p>
+            <h2>มื้อนี้ให้วงล้อเลือก</h2>
+            <p>
+                หมุนได้เรื่อย ๆ จนเจอจานที่ใช่
+                แล้วเพิ่มลงตะกร้าได้เลย
+            </p>
+        </div>
+        {% endif %}
+
+        {% if segments %}
+        <section class="wheel-legend">
+            <h2>เมนูบนวงล้อ</h2>
+
+            <ol>
+                {% for segment in segments %}
+                <li>
+                    <span>{{ segment.item.name }}</span>
+                    <strong>
+                        {{ '%.2f'|format(segment.item.price) }} ฿
+                    </strong>
+                </li>
+                {% endfor %}
+            </ol>
+        </section>
+        {% endif %}
+    </aside>
+</div>
+
+{% endif %}
+{% endblock %}

@@ -1,32 +1,80 @@
 {% extends "base.html" %}
+{% from "partials/food_card.html" import food_card %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="/static/discovery.css">
+{% endblock %}
 
 {% block content %}
-<h1>{{ title }}</h1>
-
-<div class="category-bar">
-    <a href="/{{ table_query }}" class="category-chip">ทุกหมวดหมู่</a>
-    {% for cat in categories %}
-    <a href="/category/{{ cat }}{{ table_query }}" class="category-chip">{{ cat }}</a>
-    {% endfor %}
-</div>
-
-<div class="menu-grid">
-    {% for item in items %}
-    <div class="menu-card">
-        <div class="menu-card-image">
-            <img src="{{ item.image | menu_image_url }}" alt="{{ item.name }}"
-                 onerror="this.onerror=null;this.src='/static/images/menu-placeholder.svg'">
-        </div>
-        <div class="menu-card-body">
-            <h3>{{ item.name }}</h3>
-            <p class="menu-price">{{ item.price }} บาท</p>
-            <form action="/cart/add/{{ item.id }}{{ table_query }}" method="post">
-                <button type="submit" class="btn-add">เพิ่มลงตะกร้า</button>
-            </form>
-        </div>
+<section class="discovery-hero">
+    <div>
+        <p class="eyebrow">FOOD KUB • มื้ออร่อยของคุณ</p>
+        <h1>{{ title }}</h1>
+        <p>เลือกจานที่ชอบ หรือให้วงล้อช่วยเลือกมื้อนี้</p>
     </div>
-    {% else %}
-    <p>ไม่มีเมนูในหมวดหมู่นี้</p>
-    {% endfor %}
+
+    <a class="discovery-link" href="/random{{ table_query }}">
+        🎡 วันนี้กินอะไรดี?
+    </a>
+</section>
+
+{% if error %}
+<div class="discovery-notice" role="alert">
+    {{ error }}
+    <a href="/{{ table_query }}">ลองใหม่</a>
 </div>
+
+{% else %}
+
+{% if not selected_category %}
+<section id="recommended" class="recommended-section">
+    <div class="section-heading">
+        <div>
+            <p class="eyebrow">ลองจานนี้ไหม</p>
+            <h2>เมนูแนะนำ</h2>
+        </div>
+        <span>จานที่เราคัดมาให้</span>
+    </div>
+
+    <div class="menu-grid">
+        {% for item in recommended_items %}
+            {{ food_card(item) }}
+        {% else %}
+        <p class="empty-message">
+            ยังไม่มีเมนูแนะนำ ลองเลือกจากเมนูด้านล่างได้เลย
+        </p>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+<section aria-label="รายการอาหาร">
+    <h2 class="all-menu-heading">เลือกอาหารของคุณ</h2>
+
+    <div class="category-bar">
+        <a
+            href="/{{ table_query }}"
+            class="category-chip {% if not selected_category %}is-active{% endif %}"
+            {% if not selected_category %}aria-current="page"{% endif %}
+        >ทั้งหมด</a>
+
+        {% for cat in categories %}
+        <a
+            href="/category/{{ cat }}{{ table_query }}"
+            class="category-chip {% if selected_category == cat %}is-active{% endif %}"
+            {% if selected_category == cat %}aria-current="page"{% endif %}
+        >{{ cat }}</a>
+        {% endfor %}
+    </div>
+
+    <div class="menu-grid">
+        {% for item in items %}
+            {{ food_card(item) }}
+        {% else %}
+        <p class="empty-message">ไม่พบเมนูในหมวดหมู่นี้</p>
+        {% endfor %}
+    </div>
+</section>
+
+{% endif %}
 {% endblock %}
