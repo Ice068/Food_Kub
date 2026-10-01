@@ -25,7 +25,7 @@
 
 <div class="random-layout">
     <section class="wheel-panel" aria-label="วงล้อสุ่มอาหาร">
-        <form action="/random" method="get" class="wheel-filter">
+        <form action="/random{{ table_query }}" method="get" class="wheel-filter">
             <label for="wheel-category">สุ่มจากหมวด</label>
 
             <div class="filter-row">
@@ -67,7 +67,7 @@
             </div>
         </div>
 
-        <form action="/random" method="post">
+        <form action="/random{{ table_query }}" method="post">
             <input
                 type="hidden"
                 name="category"

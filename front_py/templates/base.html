@@ -1,44 +1,47 @@
 <!DOCTYPE html>
 <html lang="th">
-{% block extra_head %}{% endblock %}
-
-<style>
-    .navbar {
-        flex-wrap: wrap;
-        gap: 12px;
-    }
-
-    .navbar nav {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-    }
-
-    .navbar nav a {
-        margin-left: 0;
-    }
-
-    @media (max-width: 600px) {
-        .navbar {
-            padding: 16px;
-        }
-    }
-</style>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ title }} | ระบบสั่งอาหาร</title>
     <link rel="stylesheet" href="/static/style.css">
+
+    <style>
+        .navbar {
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .navbar nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .navbar nav a {
+            margin-left: 0;
+        }
+
+        @media (max-width: 600px) {
+            .navbar {
+                padding: 16px;
+            }
+        }
+    </style>
+
+    {% block extra_head %}{% endblock %}
 </head>
+
 <body>
     <header class="navbar">
-        <a href="/" class="logo">🍽️ Food Kub</a>
-        <nav>
-            <a href="/">เมนู</a>
-            <a href="/#recommended">เมนูแนะนำ</a>
-            <a href="/random">วงล้ออาหาร</a>
+        <a href="/{{ table_query }}" class="logo">🍽️ Food Kub</a>
 
-            <a href="/cart" class="cart-link">
+        <nav>
+            <a href="/{{ table_query }}">เมนู</a>
+            <a href="/{{ table_query }}#recommended">เมนูแนะนำ</a>
+            <a href="/random{{ table_query }}">วงล้ออาหาร</a>
+
+            <a href="/cart{{ table_query }}" class="cart-link">
                 🛒 ตะกร้า
                 <span id="cart-count" class="cart-badge">
                     {{ cart_count | default(0) }}
@@ -48,6 +51,14 @@
     </header>
 
     <main class="container">
+        <div class="table-banner" role="status">
+            {% if table_id is not none %}
+            กำลังสั่งอาหาร: <strong>โต๊ะ {{ table_id }}</strong>
+            {% else %}
+            ยังไม่ได้ระบุโต๊ะ กรุณาสแกน QR Code ที่โต๊ะของคุณ
+            {% endif %}
+        </div>
+
         {% block content %}{% endblock %}
     </main>
 

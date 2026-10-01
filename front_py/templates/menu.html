@@ -13,7 +13,7 @@
         <p>เลือกจานที่ชอบ หรือให้วงล้อช่วยเลือกมื้อนี้</p>
     </div>
 
-    <a class="discovery-link" href="/random">
+    <a class="discovery-link" href="/random{{ table_query }}">
         🎡 วันนี้กินอะไรดี?
     </a>
 </section>
@@ -21,8 +21,9 @@
 {% if error %}
 <div class="discovery-notice" role="alert">
     {{ error }}
-    <a href="/">ลองใหม่</a>
+    <a href="/{{ table_query }}">ลองใหม่</a>
 </div>
+
 {% else %}
 
 {% if not selected_category %}
@@ -52,14 +53,14 @@
 
     <div class="category-bar">
         <a
-            href="/"
+            href="/{{ table_query }}"
             class="category-chip {% if not selected_category %}is-active{% endif %}"
             {% if not selected_category %}aria-current="page"{% endif %}
         >ทั้งหมด</a>
 
         {% for cat in categories %}
         <a
-            href="/category/{{ cat|urlencode }}"
+            href="/category/{{ cat }}{{ table_query }}"
             class="category-chip {% if selected_category == cat %}is-active{% endif %}"
             {% if selected_category == cat %}aria-current="page"{% endif %}
         >{{ cat }}</a>
