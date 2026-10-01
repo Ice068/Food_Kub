@@ -166,13 +166,13 @@ class PaymentRouter:
     # ---------- ตัวช่วยภายใน ----------
 
     async def _build_order(self, request: Request) -> tuple[list[dict], float]:
-        """แปลงตะกร้าใน session เป็นรายการสั่งซื้อ + ยอดรวม พร้อมหมวดหมู่และรูปภาพ"""
-        cart = self.cart_service.get_cart(request)
+        """แปลงบิลของโต๊ะ (รวมที่สั่งเข้าครัวแล้วและของในตะกร้า) เป็นรายการสั่งซื้อ + ยอดรวม"""
+        bill_items = self.cart_service.get_bill_items(request)
 
         items = []
         total = 0.0
 
-        for item_id, qty in cart.items():
+        for item_id, qty in bill_items.items():
             menu_item = await self.menu_service.get_by_id(int(item_id))
             if menu_item:
                 total += menu_item.price * qty

@@ -56,7 +56,13 @@ class CartRouter:
             methods=["POST"]
         )
 
-    async def show_cart(self, request: Request):
+        self.router.add_api_route(
+            "/cart/send-to-kitchen",
+            self.send_to_kitchen,
+            methods=["POST"]
+        )
+
+    async def show_cart(self, request: Request, ordered: int | None = None):
         cart = self.cart_service.get_cart(request)
 
         cart_items = []
@@ -74,6 +80,22 @@ class CartRouter:
                     "qty": qty
                 })
 
+        # รายการที่ส่งเข้าครัวแล้วของโต๊ะนี้
+        active_orders = self.cart_service.get_active_orders(request)
+        kitchen_items = []
+        kitchen_total = 0.0
+
+        for item_id, qty in active_orders.items():
+            menu_item = await self.menu_service.get_by_id(int(item_id))
+            if menu_item:
+                kitchen_total += menu_item.price * qty
+                kitchen_items.append({
+                    "id": menu_item.id,
+                    "name": menu_item.name,
+                    "price": menu_item.price,
+                    "qty": qty
+                })
+
         return self.template_service.render(
             request,
             "cart.html",
@@ -81,8 +103,21 @@ class CartRouter:
                 "title": "ตะกร้าของฉัน",
                 "cart_items": cart_items,
                 "total": total,
-                "cart_count": self.cart_service.total_count(request)
+                "kitchen_items": kitchen_items,
+                "kitchen_total": kitchen_total,
+                "ordered": ordered == 1,
+                "cart_count": self.cart_service.total_count(request),
+                "bill_count": self.cart_service.bill_total_count(request),
             }
+        )
+
+    async def send_to_kitchen(self, request: Request):
+        self.cart_service.send_cart_to_kitchen(request)
+        t_query = table_query(request)
+        delim = "&" if t_query else "?"
+        return RedirectResponse(
+            url=f"/cart{t_query}{delim}ordered=1",
+            status_code=303
         )
 
     async def add_to_cart(
@@ -136,7 +171,7 @@ class CartRouter:
         self,
         request: Request
     ):
-        self.cart_service.clear(request)
+        self.cart_service.clear_all(request)
 
         return RedirectResponse(
             url=f"/cart{table_query(request)}",

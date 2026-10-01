@@ -270,6 +270,23 @@ class TableQrTests(unittest.TestCase):
         cart_resp = self.client.get("/cart?table=5")
         self.assertIn("100", cart_resp.text)
 
+    def test_send_to_kitchen_multiple_rounds_and_pay_later(self):
+        # สั่งรอบที่ 1: ข้าวผัด 1 จาน (50.-) -> ส่งเข้าครัว
+        self.client.post("/cart/add/1?table=7")
+        resp1 = self.client.post("/cart/send-to-kitchen?table=7", follow_redirects=True)
+        self.assertIn("50.00", resp1.text)
+
+        # สั่งรอบที่ 2: ข้าวผัดเพิ่มอีก 2 จาน (100.-) -> ส่งเข้าครัว
+        self.client.post("/cart/add/1?table=7")
+        self.client.post("/cart/update/1?table=7", data={"quantity": 2})
+        resp2 = self.client.post("/cart/send-to-kitchen?table=7", follow_redirects=True)
+        # ยอดสะสมในบิลโต๊ะต้องเป็น 3 จาน = 150.00 บาท
+        self.assertIn("150.00", resp2.text)
+
+        # ไปหน้าเช็คบิลเพื่อจ่ายเงินเมื่อทานเสร็จ ยอดต้องรวมทั้ง 2 รอบ = 150.00 บาท
+        checkout = self.client.get("/checkout?table=7")
+        self.assertIn("150.00", checkout.text)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,7 +1,104 @@
 {% extends "base.html" %}
 
+{% block extra_head %}
+<style>
+    .kitchen-box {
+        background: #fff;
+        border: 2px solid #b2f2bb;
+        border-radius: 12px;
+        padding: 20px;
+        margin-top: 28px;
+        box-shadow: 0 4px 12px rgba(43, 138, 62, 0.08);
+    }
+    .kitchen-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 14px;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    .kitchen-title {
+        font-size: 1.15rem;
+        font-weight: bold;
+        color: #2b8a3e;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .kitchen-badge {
+        background: #e6fcf5;
+        color: #0ca678;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    .kitchen-list {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 14px;
+    }
+    .kitchen-list th, .kitchen-list td {
+        padding: 8px 12px;
+        text-align: left;
+        border-bottom: 1px solid #f1f3f5;
+        font-size: 0.95rem;
+    }
+    .kitchen-list th {
+        background: #f8f9fa;
+        color: #495057;
+    }
+    .kitchen-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 12px;
+        padding-top: 10px;
+        border-top: 2px dashed #b2f2bb;
+    }
+    .kitchen-total {
+        font-size: 1.15rem;
+        font-weight: bold;
+        color: #212529;
+    }
+    .ordered-alert {
+        background: #ebfbee;
+        border: 1px solid #8ce99a;
+        color: #2b8a3e;
+        border-radius: 10px;
+        padding: 14px 18px;
+        margin-bottom: 20px;
+        font-size: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .cart-actions-row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        align-items: center;
+        margin-top: 10px;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="cart-container">
+    {% if ordered %}
+    <div class="ordered-alert" role="alert">
+        <span>👨‍🍳</span>
+        <div>
+            <strong>ส่งออเดอร์เข้าครัวเรียบร้อยแล้ว!</strong>
+            <br><small>พ่อครัวกำลังจัดเตรียมอาหารให้โต๊ะของคุณ คุณสามารถเลือกสั่งอาหารเพิ่มได้ หรือกด "เรียกเช็คบิล" เมื่อทานเสร็จแล้ว</small>
+        </div>
+    </div>
+    {% endif %}
+
+    <h2>🛒 รายการที่กำลังเลือกสั่ง</h2>
+
     {% for item in cart_items %}
     <div class="cart-item">
         <div class="cart-item-info">
@@ -32,12 +129,69 @@
 
     <div class="cart-summary">
         <p>ยอดรวมทั้งหมด: {{ total }} บาท</p>
+        
         {% if cart_items %}
-        <a href="/checkout{{ table_query }}" class="btn-checkout">ชำระเงิน</a>
+        <div class="cart-actions-row">
+            <form action="/cart/send-to-kitchen{{ table_query }}" method="post" style="display: inline;">
+                <button type="submit" class="btn-checkout" style="background: #2b8a3e;">
+                    🍳 ส่งออเดอร์เข้าครัว (ยังไม่ต้องจ่ายเงิน)
+                </button>
+            </form>
+            <a href="/checkout{{ table_query }}" class="btn-checkout">
+                💳 ชำระเงินทันที
+            </a>
+        </div>
         {% endif %}
-        <form action="/cart/clear{{ table_query }}" method="post">
+
+        <form action="/cart/clear{{ table_query }}" method="post" style="margin-top: 10px;">
             <button type="submit" class="btn-clear">ล้างตะกร้า</button>
         </form>
+    </div>
+
+    <!-- ส่วนแสดงรายการที่ส่งเข้าครัวแล้ว (สะสมในบิลโต๊ะ) -->
+    {% if kitchen_items %}
+    <div class="kitchen-box">
+        <div class="kitchen-header">
+            <span class="kitchen-title">
+                👨‍🍳 อาหารที่ส่งเข้าครัวแล้ว {% if table_id %}(โต๊ะ {{ table_id }}){% endif %}
+            </span>
+            <span class="kitchen-badge">⏳ กำลังปรุง / เสิร์ฟ</span>
+        </div>
+
+        <table class="kitchen-list">
+            <thead>
+                <tr>
+                    <th>รายการ</th>
+                    <th>จำนวน</th>
+                    <th>ราคา</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in kitchen_items %}
+                <tr>
+                    <td>{{ item.name }}</td>
+                    <td>{{ item.qty }} จาน</td>
+                    <td>{{ "%.2f"|format(item.price * item.qty) }} บาท</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div class="kitchen-footer">
+            <div class="kitchen-total">
+                ยอดรวมที่สั่งไปแล้ว: {{ "%.2f"|format(kitchen_total) }} บาท
+            </div>
+            <a href="/checkout{{ table_query }}" class="btn-checkout" style="background: #d9480f; text-decoration: none;">
+                🧾 เรียกเช็คบิล / จ่ายเงินโต๊ะนี้ ({{ "%.2f"|format(kitchen_total) }} บาท)
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+    <div style="margin-top: 20px; text-align: center;">
+        <a href="/{{ table_query }}" class="btn-back" style="text-decoration: none;">
+            ← กลับไปเลือกอาหารเพิ่ม
+        </a>
     </div>
 </div>
 {% endblock %}
