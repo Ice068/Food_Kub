@@ -1,0 +1,41 @@
+# Food Kub SRS template contract
+
+{
+  "reference": "C:\\Users\\thanakrit\\.codex\\plugins\\cache\\openai-curated-remote\\openai-templates\\0.1.1\\skills\\artifact-template-strategy-memorandum\\assets\\reference.docx",
+  "sha256": "13bd3ae7aef4b3ae76c5d65200acd654c922782974dac18672e973fad93bd453",
+  "page": "US Letter 8.5 x 11 in; margins 1 in; one section",
+  "render": "Unavailable: packaged renderer reports missing soffice.exe",
+  "preserve": "All package parts except document.xml, header1.xml, footer1.xml, settings.xml, core metadata",
+  "slots": "Replace body content with SRS. Reuse source title, heading, normal paragraph patterns. Remove irrelevant financial charts and placeholder tables from body. Preserve section, styles, relationships and footer fields. Thai uses Tahoma complex-script fallback at source text size.",
+  "inventory": {
+    "[Content_Types].xml": "84a158711ec2bdfab5b3a82551d72c5a6b186fee6019b5e8a314a82c06c7c0c5",
+    "_rels/.rels": "a76c44cf6b278166bfc93edce0a98846be30e584462153ba97fa683469ff5916",
+    "word/_rels/document.xml.rels": "db1762b1bead8c26bfef1b64a7f3bb645a9e43eb1ce1b3d7e58440a9692b6b18",
+    "word/document.xml": "6745dc096e67707e171a7ef39a2c29d2b62e8469c7da541de33fa4cab3d31e49",
+    "word/footnotes.xml": "49d02b917653cb7b36ef6701977bc002e2a91e5f3d47a54c74d015c078eb66bf",
+    "word/endnotes.xml": "17aa41ce261b63fa49004cdffd095ddbc9fb0ca90541fcc578bedcb93c53eceb",
+    "word/header1.xml": "8c98738b9071fcd947ce33ec052c587c79553fbc2ca33813ab69c9677582061e",
+    "word/footer1.xml": "d8e8f1c10e9b998d2caaf41aecf8192e671295dfddb14c445748e8558009f168",
+    "word/fonts/font5.odttf": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "word/media/image1.png": "63c883c10f88aa6c9619e50715a5097d7d8172e12408958ba1c0e46ec3df13c4",
+    "word/media/image2.png": "4968751c817680b33488d0b5d492c7bbbaf83125e87a0481161e497873601854",
+    "word/theme/theme1.xml": "742bf86bb312d06389e21644f7e861273fe4f124f422c57cce0c28360b06f32d",
+    "word/fonts/font1.odttf": "ceda9eb6bb368743ff311789a840a83f1b9b5bd616f5fa2e5b58c6ef7c167d54",
+    "word/fonts/font2.odttf": "6de4af7ac13d914af71a472d893280917b4aeb60a459d255c236e125334fa3d4",
+    "word/fonts/font3.odttf": "6f84745f00146f13727225241aefe113e52997da47c41b45447e65fe29df0056",
+    "word/fonts/font4.odttf": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "word/fonts/font10.odttf": "06b3f736e46a24513a22b55df7117db2b948ac9ceb8f58af65f4d40af115f411",
+    "word/fonts/font6.odttf": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "word/fonts/font7.odttf": "5a369eaedbd5d342fb5dbe09b3631732ec531376a811dd3a2d4c9544fbab9d7a",
+    "word/fonts/font8.odttf": "0c0f91e19138ad38cf79cf0edff1cb2dcf37c85ce6bab0814955756db1917c48",
+    "word/fonts/font9.odttf": "352bc4193885f2886fe3cb340ff950e83d0349ab4a4ca3926c6f54b855b3d2f8",
+    "word/settings.xml": "dcd2a228479a567f79794a0f61ecab17d6034d742ab6eacd597bbd0708c0129a",
+    "word/fontTable.xml": "b3f922c951a76fe924053f647954f29054d3939fc1317cb215b45723092353e3",
+    "docProps/core.xml": "ec8b385405a4c833616971a8298ccabedf12bbfe0629f00a8ee6b3a2dc3c1d80",
+    "docProps/app.xml": "17cb5d61bc37b63843914c353351fe7b22c7f36ff100dc1d2e740f954aa7019e",
+    "word/styles.xml": "50fc11adede4922954db882e14f715444418e7c996ba6ba9e63658ed2190384a",
+    "word/numbering.xml": "dfc42a06fa734b7e7b97da0e719267a520b891a6ffad63c5f91438a34395d5a8",
+    "word/_rels/fontTable.xml.rels": "1f12dbbde43379d4fea16e61727c6e241b9a4fb85673faa14be1ffeb47c24826",
+    "word/webSettings.xml": "654652b29bcda66effaa855be681e988ca3309ce0263beecef79b09ccf43180e"
+  }
+}
