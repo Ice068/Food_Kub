@@ -245,6 +245,31 @@ class TableQrTests(unittest.TestCase):
             response = self.client.get("/admin/tables")
         self.assertIn("https://food.example.com/?table=5", response.text)
 
+    def test_split_bill_itemized_and_shared_pool(self):
+        import json
+        # โต๊ะ 5 สั่ง 3 จาน (จานละ 50 = 150)
+        self.client.post("/cart/add/1?table=5")
+        self.client.post("/cart/update/1?table=5", data={"quantity": 3})
+
+        # คนแรกขอจ่าย 1 จาน (50.-) + แชร์ของกลาง 20.- = รวม 70.-
+        response = self.client.post("/checkout/pay?table=5", data={
+            "method": "cash",
+            "split_mode": "split",
+            "selected_items": json.dumps({"1": 1}),
+            "shared_amount": "20.0",
+            "shared_note": "ค่าน้ำหาร 2 คน",
+        })
+        self.assertEqual(response.status_code, 200)
+        # ตรวจสอบว่าแสดงยอดที่ชำระรอบนี้ 70.00 บาท
+        self.assertIn("70.00", response.text)
+        # ตรวจสอบว่าเหลือยอดค้างชำระของโต๊ะ 100.00 บาท
+        self.assertIn("100.00", response.text)
+        self.assertIn("/checkout?table=5", response.text)
+
+        # ตรวจสอบว่าในตะกร้าของโต๊ะ 5 ถูกหักเหลือ 2 จาน ยอดรวม 100 บาท
+        cart_resp = self.client.get("/cart?table=5")
+        self.assertIn("100", cart_resp.text)
+
 
 if __name__ == "__main__":
     unittest.main()

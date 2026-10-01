@@ -1,49 +1,657 @@
 {% extends "base.html" %}
 
+{% block extra_head %}
+<style>
+    .split-tabs {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 22px;
+        border-bottom: 2px solid #eee;
+        padding-bottom: 6px;
+    }
+    .split-tab-btn {
+        background: #f1f3f5;
+        border: 2px solid transparent;
+        border-radius: 10px 10px 0 0;
+        padding: 12px 20px;
+        font-size: 1rem;
+        font-weight: 600;
+        color: #495057;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.2s ease;
+    }
+    .split-tab-btn:hover {
+        background: #e9ecef;
+    }
+    .split-tab-btn.active {
+        background: #fff;
+        color: #d9480f;
+        border-color: #f2c7ad #f2c7ad #fff;
+        margin-bottom: -8px;
+        padding-bottom: 14px;
+        box-shadow: 0 -2px 6px rgba(0,0,0,0.04);
+    }
+    .split-panel {
+        display: none;
+    }
+    .split-panel.active {
+        display: block;
+    }
+    .split-guide {
+        background: #fff9db;
+        border: 1px solid #ffe066;
+        border-radius: 10px;
+        padding: 14px 18px;
+        color: #795548;
+        font-size: 0.95rem;
+        margin-bottom: 20px;
+        line-height: 1.5;
+    }
+    .split-items-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-bottom: 24px;
+    }
+    .split-item-card {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: #fff;
+        border: 2px solid #e9ecef;
+        border-radius: 12px;
+        padding: 14px 18px;
+        gap: 14px;
+        transition: all 0.15s ease;
+    }
+    .split-item-card.is-selected {
+        border-color: #d9480f;
+        background: #fffaf7;
+    }
+    .split-item-left {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        flex: 1;
+    }
+    .split-checkbox {
+        width: 22px;
+        height: 22px;
+        accent-color: #d9480f;
+        cursor: pointer;
+    }
+    .split-item-info h4 {
+        font-size: 1.05rem;
+        color: #212529;
+        margin-bottom: 4px;
+    }
+    .split-item-meta {
+        font-size: 0.85rem;
+        color: #868e96;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+    .badge-category {
+        background: #f1f3f5;
+        color: #495057;
+        padding: 2px 8px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+    }
+    .split-item-right {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+    .split-qty-selector {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .split-qty-selector select {
+        padding: 6px 10px;
+        border: 1px solid #ced4da;
+        border-radius: 6px;
+        font-size: 0.9rem;
+        background: #fff;
+    }
+    .split-item-price {
+        font-weight: 700;
+        font-size: 1.05rem;
+        color: #d9480f;
+        min-width: 80px;
+        text-align: right;
+    }
+
+    /* Shared items section */
+    .shared-box {
+        background: #f8f9fa;
+        border: 2px dashed #ced4da;
+        border-radius: 14px;
+        padding: 20px;
+        margin-bottom: 24px;
+    }
+    .shared-box-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    .shared-box-title {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: #343a40;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .shared-items-mini {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 14px;
+    }
+    .shared-mini-tag {
+        background: #fff;
+        border: 1px solid #dee2e6;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        color: #495057;
+    }
+    .shared-split-controls {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 16px;
+        background: #fff;
+        border: 1px solid #e9ecef;
+        border-radius: 10px;
+        padding: 14px 18px;
+    }
+    .people-counter {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .people-btn {
+        width: 34px;
+        height: 34px;
+        border: 1px solid #ced4da;
+        background: #f8f9fa;
+        border-radius: 8px;
+        font-size: 1.1rem;
+        font-weight: bold;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.15s ease;
+    }
+    .people-btn:hover {
+        background: #e9ecef;
+    }
+    .people-count-display {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: #212529;
+        min-width: 60px;
+        text-align: center;
+    }
+    .shared-calc-result {
+        text-align: right;
+    }
+    .shared-per-person {
+        font-size: 1.15rem;
+        font-weight: bold;
+        color: #2b8a3e;
+    }
+    .shared-checkbox-label {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 600;
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .btn-toggle-shared {
+        background: #f8f9fa;
+        border: 1px solid #ced4da;
+        color: #495057;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        transition: all 0.15s ease;
+    }
+    .btn-toggle-shared:hover {
+        background: #e9ecef;
+        border-color: #adb5bd;
+    }
+    .btn-toggle-shared.is-shared {
+        background: #e6fcf5;
+        border-color: #20c997;
+        color: #0ca678;
+        font-weight: 600;
+    }
+    .split-item-card.is-shared-item {
+        border-style: dashed;
+        border-color: #20c997;
+        background: #f4fbf8;
+    }
+
+    /* Summary card */
+    .my-summary-card {
+        background: linear-gradient(135deg, #fff3e8 0%, #ffe8cc 100%);
+        border: 1px solid #f2c7ad;
+        border-radius: 14px;
+        padding: 20px 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 4px 12px rgba(217, 72, 15, 0.08);
+    }
+    .summary-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 6px 0;
+        font-size: 0.95rem;
+        color: #495057;
+    }
+    .summary-row.total-row {
+        border-top: 1px dashed #d9480f;
+        margin-top: 10px;
+        padding-top: 12px;
+        font-size: 1.3rem;
+        font-weight: 800;
+        color: #d9480f;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="checkout-container">
-    <h2>สรุปรายการสั่งซื้อ</h2>
+    <h2>สรุปและชำระเงิน {% if table_id %}สำหรับ โต๊ะ {{ table_id }}{% endif %}</h2>
 
-    <table class="checkout-table">
-        <thead>
-            <tr>
-                <th>รายการ</th>
-                <th>จำนวน</th>
-                <th>ราคา</th>
-            </tr>
-        </thead>
-        <tbody>
+    <!-- ตัวเลือกโหมดการชำระเงิน -->
+    <div class="split-tabs">
+        <button type="button" class="split-tab-btn active" id="tab-btn-full" onclick="switchCheckoutMode('full')">
+            💳 จ่ายทั้งโต๊ะ (Full Bill)
+        </button>
+        <button type="button" class="split-tab-btn" id="tab-btn-split" onclick="switchCheckoutMode('split')">
+            👥 แยกจ่ายรายคน + แชร์ของกลาง (Split Bill)
+        </button>
+    </div>
+
+    <!-- โหมด 1: จ่ายทั้งโต๊ะ -->
+    <div class="split-panel active" id="panel-full">
+        <table class="checkout-table">
+            <thead>
+                <tr>
+                    <th>รายการ</th>
+                    <th>หมวด</th>
+                    <th>จำนวน</th>
+                    <th>ราคา</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr>
+                    <td>{{ item.name }}</td>
+                    <td><span class="badge-category">{{ item.category }}</span></td>
+                    <td>{{ item.qty }}</td>
+                    <td>{{ "%.2f"|format(item.price * item.qty) }} บาท</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <th colspan="3">ยอดรวมทั้งหมดของโต๊ะ</th>
+                    <th>{{ "%.2f"|format(total) }} บาท</th>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+
+    <!-- โหมด 2: แยกจ่ายรายคน + แชร์ของกลาง -->
+    <div class="split-panel" id="panel-split">
+        <div class="split-guide">
+            💡 <strong>วิธีแยกจ่าย:</strong> 
+            <br>• ติ๊ก <input type="checkbox" checked disabled style="vertical-align: middle;"> เพื่อเลือกจานที่คุณกินเอง
+            <br>• หรือกดปุ่ม <strong>[➗ ตั้งเป็นของกลาง]</strong> ที่เมนูใดก็ได้ (เช่น น้ำ, น้ำแข็ง, ของทานเล่น) เพื่อย้ายไปหารเฉลี่ยร่วมกับเพื่อนในโต๊ะ!
+        </div>
+
+        <h3>1. รายการอาหารของโต๊ะ (เลือกจานของคุณ หรือกดตั้งเป็นของกลาง)</h3>
+        <div class="split-items-list" id="split-items-container">
             {% for item in items %}
-            <tr>
-                <td>{{ item.name }}</td>
-                <td>{{ item.qty }}</td>
-                <td>{{ "%.2f"|format(item.price * item.qty) }} บาท</td>
-            </tr>
+            <div class="split-item-card is-selected" id="card-{{ item.id }}" data-id="{{ item.id }}" data-price="{{ item.price }}" data-max-qty="{{ item.qty }}">
+                <div class="split-item-left">
+                    <input type="checkbox" class="split-checkbox" id="check-{{ item.id }}" checked onchange="onItemToggle({{ item.id }})">
+                    <div class="split-item-info">
+                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                            <h4>{{ item.name }}</h4>
+                            <button type="button" class="btn-toggle-shared" id="btn-shared-{{ item.id }}" onclick="toggleItemShared({{ item.id }})">
+                                ➗ ตั้งเป็นของกลาง
+                            </button>
+                        </div>
+                        <div class="split-item-meta">
+                            <span class="badge-category">{{ item.category }}</span>
+                            <span>ราคาจานละ {{ "%.2f"|format(item.price) }} บาท</span>
+                            <span id="shared-status-text-{{ item.id }}" style="color: #20c997; font-weight: bold; display: none;">(แชร์ในของกลาง 👥)</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="split-item-right">
+                    {% if item.qty > 1 %}
+                    <div class="split-qty-selector" id="qty-wrapper-{{ item.id }}">
+                        <label for="qty-{{ item.id }}">จำนวน:</label>
+                        <select id="qty-{{ item.id }}" onchange="recalculateSplit()">
+                            {% for q in range(1, item.qty + 1) %}
+                            <option value="{{ q }}" {% if q == item.qty %}selected{% endif %}>{{ q }} / {{ item.qty }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% else %}
+                    <input type="hidden" id="qty-{{ item.id }}" value="1">
+                    <span id="qty-label-{{ item.id }}">1 จาน</span>
+                    {% endif %}
+                    <div class="split-item-price" id="price-display-{{ item.id }}">
+                        {{ "%.2f"|format(item.price * item.qty) }} ฿
+                    </div>
+                </div>
+            </div>
             {% endfor %}
-        </tbody>
-        <tfoot>
-            <tr>
-                <th colspan="2">ยอดรวมทั้งหมด</th>
-                <th>{{ "%.2f"|format(total) }} บาท</th>
-            </tr>
-        </tfoot>
-    </table>
+        </div>
 
+        <!-- กล่องแชร์ของกลาง (เครื่องดื่ม / น้ำ / น้ำแข็ง / ของทานเล่น) -->
+        <div class="shared-box">
+            <div class="shared-box-header">
+                <span class="shared-box-title">🧊 ของกลางและเครื่องดื่มที่แชร์ร่วมกัน (Shared Pool)</span>
+                <span id="shared-pool-total-badge" style="font-weight: bold; color: #495057;"></span>
+            </div>
+
+            <div class="shared-items-mini" id="shared-items-list">
+                <!-- รายการของกลางที่เลือกไว้ -->
+            </div>
+
+            <div class="shared-split-controls">
+                <div class="people-counter">
+                    <span>จำนวนคนที่หารร่วมกัน:</span>
+                    <button type="button" class="people-btn" onclick="changePeopleCount(-1)">−</button>
+                    <span class="people-count-display" id="people-count-text">2 คน</span>
+                    <button type="button" class="people-btn" onclick="changePeopleCount(1)">+</button>
+                </div>
+                <div class="shared-calc-result">
+                    <label class="shared-checkbox-label">
+                        <input type="checkbox" id="include-shared-check" checked onchange="recalculateSplit()" style="width: 18px; height: 18px; accent-color: #2b8a3e;">
+                        <span>รวมส่วนแบ่งของกลางในบิลนี้ (+<span id="shared-per-person-amount">0.00</span> ฿)</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- สรุปยอดส่วนตัว -->
+        <div class="my-summary-card">
+            <div class="summary-row">
+                <span>ค่าอาหารส่วนตัวที่คุณเลือก:</span>
+                <span id="summary-personal-amount">0.00 บาท</span>
+            </div>
+            <div class="summary-row" id="summary-shared-row">
+                <span>ส่วนแบ่งของกลาง (ค่าน้ำ/น้ำแข็ง/ของแชร์):</span>
+                <span id="summary-shared-amount">0.00 บาท</span>
+            </div>
+            <div class="summary-row total-row">
+                <span>ยอดเงินที่คุณต้องชำระรอบนี้:</span>
+                <span id="summary-total-amount">{{ "%.2f"|format(total) }} บาท</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ฟอร์มส่งชำระเงิน -->
     <h2>เลือกวิธีชำระเงิน</h2>
+    <form action="/checkout/pay{{ table_query }}" method="post" class="payment-form" id="checkout-form" onsubmit="prepareFormSubmission(event)">
+        <input type="hidden" name="split_mode" id="input-split-mode" value="full">
+        <input type="hidden" name="selected_items" id="input-selected-items" value="{}">
+        <input type="hidden" name="shared_amount" id="input-shared-amount" value="0.0">
+        <input type="hidden" name="shared_note" id="input-shared-note" value="">
 
-    <form action="/checkout/pay{{ table_query }}" method="post" class="payment-form">
         {% for m in methods %}
         <label class="payment-option">
-            <input type="radio" name="method" value="{{ m.id }}"
-                   {% if loop.first %}checked{% endif %}>
-            <span>{{ m.name }}</span>
+            <input type="radio" name="method" value="{{ m.id }}" {% if loop.first %}checked{% endif %}>
+            <span>
+                {% if m.id == 'qr_bank' %}📱{% else %}💵{% endif %}
+                {{ m.name }}
+            </span>
         </label>
         {% endfor %}
 
         <div class="checkout-actions">
-            <button type="submit" class="btn-checkout">ยืนยันการชำระเงิน</button>
+            <button type="submit" class="btn-checkout" id="submit-pay-button">
+                ยืนยันการชำระเงิน ({{ "%.2f"|format(total) }} บาท)
+            </button>
             <a href="/cart{{ table_query }}" class="btn-back">กลับไปแก้ตะกร้า</a>
         </div>
     </form>
 </div>
+
+<script>
+    // ข้อมูลรายการทั้งหมดในตะกร้า
+    const allCartItems = [
+        {% for item in items %}
+        {
+            id: {{ item.id }},
+            name: "{{ item.name }}",
+            price: {{ item.price }},
+            category: "{{ item.category }}",
+            qty: {{ item.qty }}
+        },
+        {% endfor %}
+    ];
+
+    let currentMode = "full";
+    let peopleCount = 2;
+
+    // รายการของกลางเริ่มต้น (ตรวจจับหมวดเครื่องดื่ม หรือรายการน้ำ/น้ำแข็ง)
+    let sharedItemIds = new Set();
+    allCartItems.forEach(item => {
+        const cat = (item.category || "").toLowerCase();
+        const nm = (item.name || "").toLowerCase();
+        if (cat.includes("เครื่องดื่ม") || nm.includes("น้ำ") || nm.includes("ชา") || nm.includes("โซดา") || nm.includes("น้ำแข็ง")) {
+            sharedItemIds.add(item.id);
+        }
+    });
+
+    function toggleItemShared(itemId) {
+        if (sharedItemIds.has(itemId)) {
+            sharedItemIds.delete(itemId);
+        } else {
+            sharedItemIds.add(itemId);
+        }
+        updateSharedButtons();
+        initSharedItems();
+        recalculateSplit();
+    }
+
+    function updateSharedButtons() {
+        allCartItems.forEach(item => {
+            const btn = document.getElementById(`btn-shared-${item.id}`);
+            const card = document.getElementById(`card-${item.id}`);
+            const chk = document.getElementById(`check-${item.id}`);
+            const statusTxt = document.getElementById(`shared-status-text-${item.id}`);
+            const isShared = sharedItemIds.has(item.id);
+
+            if (btn) {
+                if (isShared) {
+                    btn.className = "btn-toggle-shared is-shared";
+                    btn.textContent = "✅ เป็นของกลางแล้ว (คลิกเพื่อยกเลิก)";
+                } else {
+                    btn.className = "btn-toggle-shared";
+                    btn.textContent = "➗ ตั้งเป็นของกลาง";
+                }
+            }
+
+            if (card) {
+                card.classList.toggle("is-shared-item", isShared);
+            }
+
+            if (chk) {
+                if (isShared) {
+                    chk.checked = false;
+                    chk.disabled = true;
+                } else {
+                    chk.disabled = false;
+                }
+            }
+
+            if (statusTxt) {
+                statusTxt.style.display = isShared ? "inline" : "none";
+            }
+        });
+    }
+
+    function initSharedItems() {
+        const container = document.getElementById("shared-items-list");
+        container.innerHTML = "";
+        let sharedTotal = 0;
+
+        allCartItems.forEach(item => {
+            if (sharedItemIds.has(item.id)) {
+                const cost = item.price * item.qty;
+                sharedTotal += cost;
+                const tag = document.createElement("span");
+                tag.className = "shared-mini-tag";
+                tag.style.cursor = "pointer";
+                tag.title = "คลิกเพื่อยกเลิกการแชร์";
+                tag.innerHTML = `🧊 ${item.name} x${item.qty} (${cost.toFixed(2)} ฿) <span style="color: #c92a2a; margin-left: 4px;">✕</span>`;
+                tag.onclick = () => toggleItemShared(item.id);
+                container.appendChild(tag);
+            }
+        });
+
+        const badge = document.getElementById("shared-pool-total-badge");
+        if (sharedTotal > 0) {
+            badge.textContent = `รวมของกลาง: ${sharedTotal.toFixed(2)} บาท`;
+        } else {
+            badge.textContent = "ยังไม่มีของกลาง (กดปุ่ม ➗ ที่เมนูด้านบนเพื่อเพิ่ม)";
+            container.innerHTML = "<span style='color: #868e96; font-size: 0.9rem;'>ไม่มีรายการของกลาง — คุณสามารถกดปุ่ม [➗ ตั้งเป็นของกลาง] ที่เมนูใดก็ได้ด้านบนเพื่อนำมาหารร่วมกัน</span>";
+        }
+    }
+
+    function switchCheckoutMode(mode) {
+        currentMode = mode;
+        document.getElementById("input-split-mode").value = mode;
+
+        document.getElementById("tab-btn-full").classList.toggle("active", mode === "full");
+        document.getElementById("tab-btn-split").classList.toggle("active", mode === "split");
+
+        document.getElementById("panel-full").classList.toggle("active", mode === "full");
+        document.getElementById("panel-split").classList.toggle("active", mode === "split");
+
+        recalculateSplit();
+    }
+
+    function onItemToggle(itemId) {
+        const chk = document.getElementById(`check-${itemId}`);
+        const card = document.getElementById(`card-${itemId}`);
+        if (card) {
+            card.classList.toggle("is-selected", chk.checked);
+        }
+        recalculateSplit();
+    }
+
+    function changePeopleCount(delta) {
+        peopleCount = Math.max(2, Math.min(20, peopleCount + delta));
+        document.getElementById("people-count-text").textContent = `${peopleCount} คน`;
+        recalculateSplit();
+    }
+
+    function recalculateSplit() {
+        const submitBtn = document.getElementById("submit-pay-button");
+
+        if (currentMode === "full") {
+            const tableTotal = {{ total }};
+            submitBtn.textContent = `ยืนยันการชำระเงินทั้งโต๊ะ (${tableTotal.toFixed(2)} บาท)`;
+            return;
+        }
+
+        let personalSum = 0;
+        let selectedMap = {};
+
+        allCartItems.forEach(item => {
+            const chk = document.getElementById(`check-${item.id}`);
+            const qtySelect = document.getElementById(`qty-${item.id}`);
+            const priceDisplay = document.getElementById(`price-display-${item.id}`);
+
+            if (chk && chk.checked) {
+                const qty = parseInt(qtySelect ? qtySelect.value : "1", 10) || 1;
+                const cost = item.price * qty;
+                personalSum += cost;
+                selectedMap[item.id] = qty;
+                if (priceDisplay) priceDisplay.textContent = `${cost.toFixed(2)} ฿`;
+            }
+        });
+
+        // คำนวณของกลาง
+        let sharedTotal = 0;
+        allCartItems.forEach(item => {
+            if (sharedItemIds.has(item.id)) {
+                sharedTotal += item.price * item.qty;
+            }
+        });
+
+        const perPersonShared = sharedTotal > 0 ? (sharedTotal / peopleCount) : 0;
+        document.getElementById("shared-per-person-amount").textContent = perPersonShared.toFixed(2);
+
+        const includeShared = document.getElementById("include-shared-check").checked;
+        const activeSharedAmount = (includeShared && sharedTotal > 0) ? perPersonShared : 0;
+
+        const myTotal = personalSum + activeSharedAmount;
+
+        // อัปเดต Summary Card
+        document.getElementById("summary-personal-amount").textContent = `${personalSum.toFixed(2)} บาท`;
+        document.getElementById("summary-shared-amount").textContent = `${activeSharedAmount.toFixed(2)} บาท`;
+        document.getElementById("summary-total-amount").textContent = `${myTotal.toFixed(2)} บาท`;
+
+        // อัปเดตปุ่มจ่ายเงิน
+        submitBtn.textContent = `ชำระเฉพาะส่วนของฉัน (${myTotal.toFixed(2)} บาท)`;
+
+        // อัปเดต Hidden input
+        document.getElementById("input-selected-items").value = JSON.stringify(selectedMap);
+        document.getElementById("input-shared-amount").value = activeSharedAmount.toFixed(2);
+        document.getElementById("input-shared-note").value = includeShared && sharedTotal > 0
+            ? `ค่าน้ำ/ของกลาง ${sharedTotal.toFixed(2)} บ. หาร ${peopleCount} คน`
+            : "";
+    }
+
+    function prepareFormSubmission(e) {
+        if (currentMode === "split") {
+            const selectedItemsStr = document.getElementById("input-selected-items").value;
+            const sharedAmount = parseFloat(document.getElementById("input-shared-amount").value || "0");
+            const selectedMap = JSON.parse(selectedItemsStr || "{}");
+
+            if (Object.keys(selectedMap).length === 0 && sharedAmount <= 0) {
+                e.preventDefault();
+                alert("กรุณาเลือกรายการอาหารที่ต้องการชำระอย่างน้อย 1 รายการ หรือเลือกแชร์ของกลางครับ");
+                return false;
+            }
+        }
+        return true;
+    }
+
+    // เริ่มต้นทำงาน
+    document.addEventListener("DOMContentLoaded", () => {
+        updateSharedButtons();
+        initSharedItems();
+        recalculateSplit();
+    });
+</script>
 {% endblock %}

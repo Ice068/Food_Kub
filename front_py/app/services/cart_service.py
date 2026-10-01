@@ -34,6 +34,17 @@ class CartService:
         cart.pop(str(item_id), None)
         request.session[self._session_key(request)] = cart
 
+    def deduct_items(self, request: Request, items_to_deduct: dict):
+        """หักจำนวนรายการที่ชำระเงินแล้วออกจากตะกร้าของโต๊ะนั้น"""
+        cart = self.get_cart(request)
+        for item_id, qty in items_to_deduct.items():
+            key = str(item_id)
+            if key in cart:
+                cart[key] -= int(qty)
+                if cart[key] <= 0:
+                    cart.pop(key, None)
+        request.session[self._session_key(request)] = cart
+
     def clear(self, request: Request):
         request.session[self._session_key(request)] = {}
 

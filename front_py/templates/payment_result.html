@@ -1,5 +1,55 @@
 {% extends "base.html" %}
 
+{% block extra_head %}
+<style>
+    .split-summary-box {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 10px;
+        padding: 16px;
+        margin: 16px 0;
+        text-align: left;
+    }
+    .split-summary-box h4 {
+        color: #495057;
+        margin-bottom: 8px;
+        font-size: 0.95rem;
+    }
+    .paid-item-row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.9rem;
+        padding: 4px 0;
+        color: #212529;
+    }
+    .remaining-banner {
+        background: #e7f5ff;
+        border: 1px solid #74c0fc;
+        color: #1971c2;
+        border-radius: 10px;
+        padding: 14px;
+        margin: 16px 0;
+        font-size: 0.95rem;
+    }
+    .fully-paid-banner {
+        background: #ebfbee;
+        border: 1px solid #8ce99a;
+        color: #2b8a3e;
+        border-radius: 10px;
+        padding: 14px;
+        margin: 16px 0;
+        font-size: 1rem;
+        font-weight: bold;
+    }
+    .result-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-top: 18px;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="result-container">
     {% if error %}
@@ -11,6 +61,47 @@
 
     {% else %}
     <div class="result-card">
+        {% if is_split %}
+        <h2>👥 บิลแยกชำระของคุณ</h2>
+        <p class="result-method">วิธีชำระเงิน: <strong>{{ result.method_name }}</strong></p>
+        <p class="result-amount">{{ "%.2f"|format(result.amount) }} บาท</p>
+        <p class="result-message">{{ result.message }}</p>
+
+        <!-- รายการที่จ่ายในรอบนี้ -->
+        <div class="split-summary-box">
+            <h4>📋 รายการที่ชำระในบิลนี้:</h4>
+            {% for it in pay_items %}
+            <div class="paid-item-row">
+                <span>• {{ it.name }} (x{{ it.qty }})</span>
+                <strong>{{ "%.2f"|format(it.price * it.qty) }} ฿</strong>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% if is_fully_paid %}
+        <div class="fully-paid-banner">
+            🎉 โต๊ะนี้ชำระเงินครบทุกรายการเรียบร้อยแล้ว ขอบคุณครับ!
+        </div>
+        <form action="/cart/clear{{ table_query }}" method="post">
+            <button type="submit" class="btn-checkout">เสร็จสิ้น (ล้างบิลโต๊ะ)</button>
+        </form>
+        {% else %}
+        <div class="remaining-banner">
+            ℹ️ ยังมียอดค้างชำระของโต๊ะอีก: <strong>{{ "%.2f"|format(remaining_total) }} บาท</strong>
+            <br><small>เพื่อนในโต๊ะสามารถเข้าสแกนจ่ายรายการที่เหลือต่อได้เลย</small>
+        </div>
+        <div class="result-actions">
+            <a href="/checkout{{ table_query }}" class="btn-checkout" style="background: #2b8a3e; text-decoration: none;">
+                ชำระรายการที่เหลือต่อ
+            </a>
+            <a href="/{{ table_query }}" class="btn-back" style="text-decoration: none;">
+                กลับไปดูหน้าเมนู
+            </a>
+        </div>
+        {% endif %}
+
+        {% else %}
+        <!-- โหมดชำระทั้งโต๊ะตามปกติ -->
         <h2>✅ รับออเดอร์แล้ว</h2>
         <p class="result-method">วิธีชำระเงิน: <strong>{{ result.method_name }}</strong></p>
         <p class="result-amount">{{ "%.2f"|format(result.amount) }} บาท</p>
@@ -26,6 +117,7 @@
         <form action="/cart/clear{{ table_query }}" method="post">
             <button type="submit" class="btn-checkout">เสร็จสิ้น (ล้างตะกร้า)</button>
         </form>
+        {% endif %}
     </div>
     {% endif %}
 </div>

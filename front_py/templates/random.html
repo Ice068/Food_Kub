@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "partials/food_card.html" import food_card %}
+{% from "partials/food_card.html" import food_card with context %}
 
 {% block extra_head %}
 <link rel="stylesheet" href="/static/discovery.css">
@@ -13,19 +13,22 @@
         <p>เลือกหมวดที่อยากกิน แล้วให้วงล้อช่วยตัดสินใจ</p>
     </div>
 
-    <a class="discovery-back" href="/">← กลับไปดูเมนู</a>
+    <a class="discovery-back" href="/{{ table_query }}">← กลับไปดูเมนู</a>
 </section>
 
 {% if error %}
 <div class="discovery-notice" role="alert">
     {{ error }}
-    <a href="/random">ลองใหม่</a>
+    <a href="/random{{ table_query }}">ลองใหม่</a>
 </div>
 {% else %}
 
 <div class="random-layout">
     <section class="wheel-panel" aria-label="วงล้อสุ่มอาหาร">
-        <form action="/random{{ table_query }}" method="get" class="wheel-filter">
+        <form action="/random" method="get" class="wheel-filter">
+            {% if table_id %}
+            <input type="hidden" name="table" value="{{ table_id }}">
+            {% endif %}
             <label for="wheel-category">สุ่มจากหมวด</label>
 
             <div class="filter-row">
@@ -98,7 +101,7 @@
             <span>🍽️</span>
             <h2>ไม่พบเมนูในหมวดนี้</h2>
             <p>ลองเลือกหมวดอื่น หรือกลับมาดูใหม่ภายหลัง</p>
-            <a href="/random">ดูทุกหมวด</a>
+            <a href="/random{{ table_query }}">ดูทุกหมวด</a>
         </div>
         {% endif %}
     </section>
