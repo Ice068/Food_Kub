@@ -1,5 +1,7 @@
-from fastapi import APIRouter, Request, Form
+from fastapi import APIRouter, Depends, Request, Form
 from fastapi.responses import RedirectResponse
+
+from app.core.table_context import set_table_context, table_query
 
 from app.services.template_service import TemplateService
 from app.services.cart_service import CartService
@@ -14,7 +16,7 @@ class CartRouter:
         menu_service: MenuService,
         template_service: TemplateService
     ):
-        self.router = APIRouter()
+        self.router = APIRouter(dependencies=[Depends(set_table_context)])
 
         self.cart_service = cart_service
         self.menu_service = menu_service
@@ -94,7 +96,7 @@ class CartRouter:
         )
 
         return RedirectResponse(
-            url="/cart",
+            url=f"/cart{table_query(request)}",
             status_code=303
         )
 
@@ -111,7 +113,7 @@ class CartRouter:
         )
 
         return RedirectResponse(
-            url="/cart",
+            url=f"/cart{table_query(request)}",
             status_code=303
         )
 
@@ -126,7 +128,7 @@ class CartRouter:
         )
 
         return RedirectResponse(
-            url="/cart",
+            url=f"/cart{table_query(request)}",
             status_code=303
         )
 
@@ -137,6 +139,6 @@ class CartRouter:
         self.cart_service.clear(request)
 
         return RedirectResponse(
-            url="/cart",
+            url=f"/cart{table_query(request)}",
             status_code=303
         )

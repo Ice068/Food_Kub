@@ -1,6 +1,8 @@
 import httpx
-from fastapi import APIRouter, Request, Form
+from fastapi import APIRouter, Depends, Request, Form
 from fastapi.responses import RedirectResponse
+
+from app.core.table_context import set_table_context, table_query
 
 from app.services.cart_service import CartService
 from app.services.menu_service import MenuService
@@ -18,7 +20,7 @@ class PaymentRouter:
         menu_service: MenuService,
         template_service: TemplateService,
     ):
-        self.router = APIRouter(prefix="/checkout")
+        self.router = APIRouter(prefix="/checkout", dependencies=[Depends(set_table_context)])
 
         self.payment_service = payment_service
         self.cart_service = cart_service
@@ -37,7 +39,7 @@ class PaymentRouter:
 
         # ตะกร้าว่าง ไม่มีอะไรให้จ่าย ส่งกลับไปหน้าตะกร้า
         if not items:
-            return RedirectResponse(url="/cart", status_code=303)
+            return RedirectResponse(url=f"/cart{table_query(request)}", status_code=303)
 
         methods = await self.payment_service.get_methods()
 
@@ -58,7 +60,7 @@ class PaymentRouter:
         items, total = await self._build_order(request)
 
         if not items:
-            return RedirectResponse(url="/cart", status_code=303)
+            return RedirectResponse(url=f"/cart{table_query(request)}", status_code=303)
 
         context = {
             "title": "ผลการชำระเงิน",

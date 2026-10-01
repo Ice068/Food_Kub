@@ -4,4 +4,5 @@ jinja2
 python-multipart
 httpx
 firebase-admin
-qrcode[pil]
+itsdangerous
+qrcode[pil]>=8.0,<9

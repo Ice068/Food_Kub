@@ -31,7 +31,7 @@
 
     <h2>เลือกวิธีชำระเงิน</h2>
 
-    <form action="/checkout/pay" method="post" class="payment-form">
+    <form action="/checkout/pay{{ table_query }}" method="post" class="payment-form">
         {% for m in methods %}
         <label class="payment-option">
             <input type="radio" name="method" value="{{ m.id }}"
@@ -42,7 +42,7 @@
 
         <div class="checkout-actions">
             <button type="submit" class="btn-checkout">ยืนยันการชำระเงิน</button>
-            <a href="/cart" class="btn-back">กลับไปแก้ตะกร้า</a>
+            <a href="/cart{{ table_query }}" class="btn-back">กลับไปแก้ตะกร้า</a>
         </div>
     </form>
 </div>

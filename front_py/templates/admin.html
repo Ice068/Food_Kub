@@ -16,6 +16,20 @@
 
     <main class="container">
         <h1>{{ title }}</h1>
+        <section class="admin-qr-panel" aria-label="จัดการ QR Code ประจำโต๊ะ">
+            <div class="admin-qr-info">
+                <span class="qr-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 3h6v6H3zM15 3h6v6h-6zM3 15h6v6H3zM15 15h2v2h-2zM21 13v4M13 21h4M21 21h-2M3 12h2M12 3v2M12 9v4h5"/>
+                    </svg>
+                </span>
+                <div>
+                    <h2>QR Code ประจำโต๊ะ</h2>
+                    <p>กำหนดจำนวนโต๊ะ แล้วสร้างและพิมพ์ QR ให้ลูกค้าสแกนเลือกอาหาร</p>
+                </div>
+            </div>
+            <a class="action-button" href="/admin/tables">จัดการ QR Code ประจำโต๊ะ <span aria-hidden="true">→</span></a>
+        </section>
 
         <div class="admin-form">
             <h2>เพิ่มเมนูใหม่</h2>
@@ -70,9 +84,9 @@
                 {% for item in items %}
                 <tr>
                     <td>{{ item.id }}</td>
-                    <td><img src="{{ item.image_url }}" width="60" height="60"
+                    <td><img src="{{ item.image | menu_image_url }}" alt="{{ item.name }}" width="60" height="60"
                              style="object-fit:cover;border-radius:6px;"
-                             onerror="this.src='https://placehold.co/60x60'"></td> 
+                             onerror="this.onerror=null;this.src='/static/images/menu-placeholder.svg'"></td>
                     <td>{{ item.name }}</td>
                     <td>{{ item.price }} บาท</td>
                     <td>{{ item.category }}</td>

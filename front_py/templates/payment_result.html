@@ -6,7 +6,7 @@
     <div class="result-card result-error">
         <h2>❌ ทำรายการไม่สำเร็จ</h2>
         <p>{{ error }}</p>
-        <a href="/checkout" class="btn-checkout">ลองอีกครั้ง</a>
+        <a href="/checkout{{ table_query }}" class="btn-checkout">ลองอีกครั้ง</a>
     </div>
 
     {% else %}
@@ -23,7 +23,7 @@
         <p class="qr-hint">เปิดแอปธนาคาร แล้วสแกน QR นี้ ยอดเงินจะขึ้นให้อัตโนมัติ</p>
         {% endif %}
 
-        <form action="/cart/clear" method="post">
+        <form action="/cart/clear{{ table_query }}" method="post">
             <button type="submit" class="btn-checkout">เสร็จสิ้น (ล้างตะกร้า)</button>
         </form>
     </div>
