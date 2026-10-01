@@ -9,6 +9,7 @@ from app.services.cart_service import CartService
 from app.routers.menu_router import MenuRouter
 from app.routers.cart_router import CartRouter
 from app.routers.admin_router import AdminRouter
+from app.routers.table_router import TableRouter
 
 
 class Application:
@@ -41,6 +42,7 @@ class Application:
         self.app.include_router(menu_router.router)
         self.app.include_router(cart_router.router)
         self.app.include_router(admin_router.router)
+        self.app.include_router(TableRouter(self.template_service).router)
 
     def get_app(self) -> FastAPI:
         return self.app

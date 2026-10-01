@@ -9,19 +9,19 @@
             <span>{{ item.price }} บาท / ชิ้น</span>
         </div>
         <div class="cart-item-controls">
-            <form action="/cart/update/{{ item.id }}" method="post">
+            <form action="/cart/update/{{ item.id }}{{ table_query }}" method="post">
                 <input type="hidden" name="quantity" value="{{ item.qty - 1 }}">
                 <button type="submit">-</button>
             </form>
 
             <span>{{ item.qty }}</span>
 
-            <form action="/cart/update/{{ item.id }}" method="post">
+            <form action="/cart/update/{{ item.id }}{{ table_query }}" method="post">
                 <input type="hidden" name="quantity" value="{{ item.qty + 1 }}">
                 <button type="submit">+</button>
             </form>
 
-            <form action="/cart/remove/{{ item.id }}" method="post">
+            <form action="/cart/remove/{{ item.id }}{{ table_query }}" method="post">
                 <button type="submit" class="btn-remove">ลบ</button>
             </form>
         </div>
@@ -32,7 +32,7 @@
 
     <div class="cart-summary">
         <p>ยอดรวมทั้งหมด: {{ total }} บาท</p>
-        <form action="/cart/clear" method="post">
+        <form action="/cart/clear{{ table_query }}" method="post">
             <button type="submit" class="btn-clear">ล้างตะกร้า</button>
         </form>
     </div>

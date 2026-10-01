@@ -2,19 +2,23 @@ from starlette.requests import Request
 
 
 class CartService:
-    """จัดการตะกร้าสินค้า เก็บไว้ใน session ของแต่ละคน (ฝั่ง server ไม่ใช้ JS)"""
+    """Store each customer's carts in their session, scoped by the request's table."""
 
     SESSION_KEY = "cart"
 
+    def _session_key(self, request: Request) -> str:
+        table_id = getattr(request.state, "table_id", None)
+        return f"cart_table_{table_id}" if table_id is not None else self.SESSION_KEY
+
     def get_cart(self, request: Request) -> dict:
         """คืนค่า cart เป็น dict {item_id(str): quantity(int)}"""
-        return request.session.get(self.SESSION_KEY, {})
+        return request.session.get(self._session_key(request), {})
 
     def add_item(self, request: Request, item_id: int):
         cart = self.get_cart(request)
         key = str(item_id)
         cart[key] = cart.get(key, 0) + 1
-        request.session[self.SESSION_KEY] = cart
+        request.session[self._session_key(request)] = cart
 
     def update_quantity(self, request: Request, item_id: int, quantity: int):
         cart = self.get_cart(request)
@@ -23,15 +27,15 @@ class CartService:
             cart.pop(key, None)
         else:
             cart[key] = quantity
-        request.session[self.SESSION_KEY] = cart
+        request.session[self._session_key(request)] = cart
 
     def remove_item(self, request: Request, item_id: int):
         cart = self.get_cart(request)
         cart.pop(str(item_id), None)
-        request.session[self.SESSION_KEY] = cart
+        request.session[self._session_key(request)] = cart
 
     def clear(self, request: Request):
-        request.session[self.SESSION_KEY] = {}
+        request.session[self._session_key(request)] = {}
 
     def total_count(self, request: Request) -> int:
         return sum(self.get_cart(request).values())

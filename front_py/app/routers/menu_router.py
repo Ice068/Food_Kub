@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends, Request
+
+from app.core.table_context import set_table_context
 
 from app.services.menu_service import MenuService
 from app.services.template_service import TemplateService
@@ -9,7 +11,7 @@ class MenuRouter:
     """รับ request เกี่ยวกับหน้าเมนู แล้วประสานงานกับ MenuService + TemplateService"""
 
     def __init__(self, menu_service: MenuService, template_service: TemplateService, cart_service: CartService):
-        self.router = APIRouter()
+        self.router = APIRouter(dependencies=[Depends(set_table_context)])
         self.menu_service = menu_service
         self.template_service = template_service
         self.cart_service = cart_service  # เพิ่มบรรทัดนี้
