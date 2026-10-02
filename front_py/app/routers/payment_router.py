@@ -111,10 +111,10 @@ class PaymentRouter:
 
             clean_shared = max(0.0, float(shared_amount or 0.0))
             if clean_shared > 0:
-                note = shared_note.strip() or "ค่าน้ำ/น้ำแข็ง/ของกลาง"
+                note = shared_note.strip() or "ค่าน้ำ/ของกลาง"
                 custom_items.append({
                     "id": 9999,
-                    "name": f"ส่วนแบ่งของกลาง ({note})",
+                    "name": f"ส่วนแบ่งของกลาง • {note}",
                     "price": round(clean_shared, 2),
                     "qty": 1,
                 })

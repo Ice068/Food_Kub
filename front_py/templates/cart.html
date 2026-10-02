@@ -134,7 +134,7 @@
         <div class="cart-actions-row">
             <form action="/cart/send-to-kitchen{{ table_query }}" method="post" style="display: inline;">
                 <button type="submit" class="btn-checkout" style="background: #2b8a3e;">
-                    🍳 ส่งออเดอร์เข้าครัว (ยังไม่ต้องจ่ายเงิน)
+                    🍳 ส่งออเดอร์เข้าครัว
                 </button>
             </form>
             <a href="/checkout{{ table_query }}" class="btn-checkout">
@@ -153,7 +153,7 @@
     <div class="kitchen-box">
         <div class="kitchen-header">
             <span class="kitchen-title">
-                👨‍🍳 อาหารที่ส่งเข้าครัวแล้ว {% if table_id %}(โต๊ะ {{ table_id }}){% endif %}
+                👨‍🍳 อาหารที่ส่งเข้าครัวแล้ว {% if table_id %}• โต๊ะ {{ table_id }}{% endif %}
             </span>
             <span class="kitchen-badge">⏳ กำลังปรุง / เสิร์ฟ</span>
         </div>
@@ -182,7 +182,7 @@
                 ยอดรวมที่สั่งไปแล้ว: {{ "%.2f"|format(kitchen_total) }} บาท
             </div>
             <a href="/checkout{{ table_query }}" class="btn-checkout" style="background: #d9480f; text-decoration: none;">
-                🧾 เรียกเช็คบิล / จ่ายเงินโต๊ะนี้ ({{ "%.2f"|format(kitchen_total) }} บาท)
+                🧾 เรียกเช็คบิล • {{ "%.2f"|format(kitchen_total) }} บาท
             </a>
         </div>
     </div>

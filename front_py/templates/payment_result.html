@@ -72,7 +72,7 @@
             <h4>📋 รายการที่ชำระในบิลนี้:</h4>
             {% for it in pay_items %}
             <div class="paid-item-row">
-                <span>• {{ it.name }} (x{{ it.qty }})</span>
+                <span>• {{ it.name }} x{{ it.qty }}</span>
                 <strong>{{ "%.2f"|format(it.price * it.qty) }} ฿</strong>
             </div>
             {% endfor %}
@@ -83,7 +83,7 @@
             🎉 โต๊ะนี้ชำระเงินครบทุกรายการเรียบร้อยแล้ว ขอบคุณครับ!
         </div>
         <form action="/cart/clear{{ table_query }}" method="post">
-            <button type="submit" class="btn-checkout">เสร็จสิ้น (ล้างบิลโต๊ะ)</button>
+            <button type="submit" class="btn-checkout">เสร็จสิ้น • ปิดบิลโต๊ะ</button>
         </form>
         {% else %}
         <div class="remaining-banner">
@@ -115,7 +115,7 @@
         {% endif %}
 
         <form action="/cart/clear{{ table_query }}" method="post">
-            <button type="submit" class="btn-checkout">เสร็จสิ้น (ล้างตะกร้า)</button>
+            <button type="submit" class="btn-checkout">เสร็จสิ้น</button>
         </form>
         {% endif %}
     </div>

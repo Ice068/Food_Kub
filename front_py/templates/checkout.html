@@ -285,10 +285,10 @@
     <!-- ตัวเลือกโหมดการชำระเงิน -->
     <div class="split-tabs">
         <button type="button" class="split-tab-btn active" id="tab-btn-full" onclick="switchCheckoutMode('full')">
-            💳 จ่ายทั้งโต๊ะ (Full Bill)
+            💳 จ่ายทั้งโต๊ะ
         </button>
         <button type="button" class="split-tab-btn" id="tab-btn-split" onclick="switchCheckoutMode('split')">
-            👥 แยกจ่ายรายคน + แชร์ของกลาง (Split Bill)
+            👥 แยกจ่ายรายคน + แชร์ของกลาง
         </button>
     </div>
 
@@ -333,10 +333,10 @@
         <div class="split-guide">
             💡 <strong>วิธีแยกจ่าย:</strong> 
             <br>• ติ๊ก <input type="checkbox" checked disabled style="vertical-align: middle;"> เพื่อเลือกจานที่คุณกินเอง
-            <br>• หรือกดปุ่ม <strong>[➗ ตั้งเป็นของกลาง]</strong> ที่เมนูใดก็ได้ (เช่น น้ำ, น้ำแข็ง, ของทานเล่น) เพื่อย้ายไปหารเฉลี่ยร่วมกับเพื่อนในโต๊ะ!
+            <br>• หรือกดปุ่ม <strong>➗ ตั้งเป็นของกลาง</strong> ที่เมนูใดก็ได้ เพื่อย้ายไปหารเฉลี่ยร่วมกับเพื่อนในโต๊ะ
         </div>
 
-        <h3>1. รายการอาหารของโต๊ะ (เลือกจานของคุณ หรือกดตั้งเป็นของกลาง)</h3>
+        <h3>1. รายการอาหารของโต๊ะ • เลือกจานของคุณ หรือตั้งเป็นของกลาง</h3>
         <div class="split-items-list" id="split-items-container">
             {% for item in items %}
             <div class="split-item-card is-selected" id="card-{{ item.id }}" data-id="{{ item.id }}" data-price="{{ item.price }}" data-max-qty="{{ item.qty }}">
@@ -352,7 +352,7 @@
                         <div class="split-item-meta">
                             <span class="badge-category">{{ item.category }}</span>
                             <span>ราคาจานละ {{ "%.2f"|format(item.price) }} บาท</span>
-                            <span id="shared-status-text-{{ item.id }}" style="color: #20c997; font-weight: bold; display: none;">(แชร์ในของกลาง 👥)</span>
+                            <span id="shared-status-text-{{ item.id }}" style="color: #20c997; font-weight: bold; display: none;">• แชร์ของกลาง 👥</span>
                         </div>
                     </div>
                 </div>
@@ -381,7 +381,7 @@
         <!-- กล่องแชร์ของกลาง (เครื่องดื่ม / น้ำ / น้ำแข็ง / ของทานเล่น) -->
         <div class="shared-box">
             <div class="shared-box-header">
-                <span class="shared-box-title">🧊 ของกลางและเครื่องดื่มที่แชร์ร่วมกัน (Shared Pool)</span>
+                <span class="shared-box-title">🧊 ของกลางและเครื่องดื่มที่แชร์ร่วมกัน</span>
                 <span id="shared-pool-total-badge" style="font-weight: bold; color: #495057;"></span>
             </div>
 
@@ -399,7 +399,7 @@
                 <div class="shared-calc-result">
                     <label class="shared-checkbox-label">
                         <input type="checkbox" id="include-shared-check" checked onchange="recalculateSplit()" style="width: 18px; height: 18px; accent-color: #2b8a3e;">
-                        <span>รวมส่วนแบ่งของกลางในบิลนี้ (+<span id="shared-per-person-amount">0.00</span> ฿)</span>
+                        <span>รวมส่วนแบ่งของกลางในบิลนี้ • +<span id="shared-per-person-amount">0.00</span> ฿</span>
                     </label>
                 </div>
             </div>
@@ -412,7 +412,7 @@
                 <span id="summary-personal-amount">0.00 บาท</span>
             </div>
             <div class="summary-row" id="summary-shared-row">
-                <span>ส่วนแบ่งของกลาง (ค่าน้ำ/น้ำแข็ง/ของแชร์):</span>
+                <span>ส่วนแบ่งของกลาง:</span>
                 <span id="summary-shared-amount">0.00 บาท</span>
             </div>
             <div class="summary-row total-row">
@@ -443,7 +443,7 @@
 
         <div class="checkout-actions">
             <button type="submit" class="btn-checkout" id="submit-pay-button">
-                ยืนยันการชำระเงิน ({{ "%.2f"|format(total) }} บาท)
+                ยืนยันการชำระเงิน • {{ "%.2f"|format(total) }} บาท
             </button>
             <a href="/cart{{ table_query }}" class="btn-back">กลับไปแก้ตะกร้า</a>
         </div>
@@ -504,7 +504,7 @@
             if (btn) {
                 if (isShared) {
                     btn.className = "btn-toggle-shared is-shared";
-                    btn.textContent = "✅ เป็นของกลางแล้ว (คลิกเพื่อยกเลิก)";
+                    btn.textContent = "✅ เป็นของกลางแล้ว";
                 } else {
                     btn.className = "btn-toggle-shared";
                     btn.textContent = "➗ ตั้งเป็นของกลาง";
@@ -543,7 +543,7 @@
                 tag.className = "shared-mini-tag";
                 tag.style.cursor = "pointer";
                 tag.title = "คลิกเพื่อยกเลิกการแชร์";
-                tag.innerHTML = `🧊 ${item.name} x${item.qty} (${cost.toFixed(2)} ฿) <span style="color: #c92a2a; margin-left: 4px;">✕</span>`;
+                tag.innerHTML = `🧊 ${item.name} x${item.qty} • ${cost.toFixed(2)} ฿ <span style="color: #c92a2a; margin-left: 4px;">✕</span>`;
                 tag.onclick = () => toggleItemShared(item.id);
                 container.appendChild(tag);
             }
@@ -554,13 +554,13 @@
             const paid = Math.min(sharedTotal, initialSharedPaid);
             const remaining = Math.max(0, sharedTotal - paid);
             if (paid > 0) {
-                badge.innerHTML = `รวมของกลาง: <strong>${sharedTotal.toFixed(2)}</strong> บาท <span style="color: #2b8a3e; margin-left: 6px;">(จ่ายแล้ว ${paid.toFixed(2)} บ. • เหลือต้องจ่าย ${remaining.toFixed(2)} บ.)</span>`;
+                badge.innerHTML = `รวมของกลาง: <strong>${sharedTotal.toFixed(2)}</strong> บาท <span style="color: #2b8a3e; margin-left: 6px;">• จ่ายแล้ว ${paid.toFixed(2)} บ. • เหลือ ${remaining.toFixed(2)} บ.</span>`;
             } else {
                 badge.textContent = `รวมของกลาง: ${sharedTotal.toFixed(2)} บาท`;
             }
         } else {
-            badge.textContent = "ยังไม่มีของกลาง (กดปุ่ม ➗ ที่เมนูด้านบนเพื่อเพิ่ม)";
-            container.innerHTML = "<span style='color: #868e96; font-size: 0.9rem;'>ไม่มีรายการของกลาง — คุณสามารถกดปุ่ม [➗ ตั้งเป็นของกลาง] ที่เมนูใดก็ได้ด้านบนเพื่อนำมาหารร่วมกัน</span>";
+            badge.textContent = "ยังไม่มีของกลาง";
+            container.innerHTML = "<span style='color: #868e96; font-size: 0.9rem;'>ไม่มีรายการของกลาง — คุณสามารถกดปุ่ม ➗ ตั้งเป็นของกลาง ที่เมนูด้านบนเพื่อนำมาหารร่วมกัน</span>";
         }
     }
 
@@ -597,7 +597,7 @@
 
         if (currentMode === "full") {
             const tableTotal = {{ total }};
-            submitBtn.textContent = `ยืนยันการชำระเงินทั้งโต๊ะ (${tableTotal.toFixed(2)} บาท)`;
+            submitBtn.textContent = `ยืนยันการชำระเงินทั้งโต๊ะ • ${tableTotal.toFixed(2)} บาท`;
             return;
         }
 
@@ -643,7 +643,7 @@
         document.getElementById("summary-total-amount").textContent = `${myTotal.toFixed(2)} บาท`;
 
         // อัปเดตปุ่มจ่ายเงิน
-        submitBtn.textContent = `ชำระเฉพาะส่วนของฉัน (${myTotal.toFixed(2)} บาท)`;
+        submitBtn.textContent = `ชำระเฉพาะส่วนของฉัน • ${myTotal.toFixed(2)} บาท`;
 
         // อัปเดต Hidden input
         document.getElementById("input-selected-items").value = JSON.stringify(selectedMap);
@@ -651,7 +651,7 @@
         document.getElementById("input-shared-item-ids").value = JSON.stringify(Array.from(sharedItemIds));
         document.getElementById("input-shared-note").value = includeShared && sharedRemaining > 0
             ? (paid > 0
-                ? `ค่าน้ำ/ของกลาง ${sharedTotal.toFixed(2)} บ. (จ่ายแล้ว ${paid.toFixed(2)} บ. เหลือ ${sharedRemaining.toFixed(2)} บ.) หาร ${peopleCount} คน`
+                ? `ค่าน้ำ/ของกลาง ${sharedTotal.toFixed(2)} บ. • จ่ายแล้ว ${paid.toFixed(2)} บ. เหลือ ${sharedRemaining.toFixed(2)} บ. • หาร ${peopleCount} คน`
                 : `ค่าน้ำ/ของกลาง ${sharedTotal.toFixed(2)} บ. หาร ${peopleCount} คน`)
             : "";
     }
