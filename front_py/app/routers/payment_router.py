@@ -53,6 +53,8 @@ class PaymentRouter:
                 "total": total,
                 "methods": methods,
                 "cart_count": self.cart_service.total_count(request),
+                "shared_paid": self.cart_service.get_shared_paid(request),
+                "shared_item_ids": list(self.cart_service.get_shared_item_ids(request)),
             },
         )
 
@@ -64,6 +66,7 @@ class PaymentRouter:
         selected_items: str = Form("{}"),
         shared_amount: float = Form(0.0),
         shared_note: str = Form(""),
+        shared_item_ids: str = Form("[]"),
     ):
         """ส่งคำสั่งจ่ายเงินไปหลังบ้าน รองรับทั้งจ่ายเต็มบิลและแยกจ่ายรายคน (Split Bill)"""
         items, total = await self._build_order(request)
@@ -75,6 +78,7 @@ class PaymentRouter:
         pay_amount = total
         pay_items = items
         deducted_map = {}
+        clean_shared = 0.0
 
         if is_split:
             try:
@@ -146,13 +150,29 @@ class PaymentRouter:
 
         try:
             context["result"] = await self.payment_service.process(method, pay_amount, clean_pay_items)
-            if is_split and deducted_map:
-                # หักเฉพาะรายการที่ชำระไปแล้วออกจากตะกร้าของโต๊ะ
-                self.cart_service.deduct_items(request, deducted_map)
+            if is_split:
+                # 1. หักอาหารจานส่วนตัวที่เลือกชำระ
+                if deducted_map:
+                    self.cart_service.deduct_items(request, deducted_map)
+
+                # 2. บันทึกยอดเงินกองกลางที่ชำระไปแล้ว
+                if clean_shared > 0:
+                    try:
+                        passed_shared_ids = json.loads(shared_item_ids) if shared_item_ids else []
+                    except Exception:
+                        passed_shared_ids = []
+                    self.cart_service.record_shared_payment(request, clean_shared, passed_shared_ids)
+
+                # 3. ตัดรายการของกลางที่ชำระครบเต็มจำนวนแล้ว
+                self.cart_service.settle_fully_paid_shared_items(request, items)
+
                 remaining_items, remaining_total = await self._build_order(request)
                 context["remaining_total"] = remaining_total
-                context["is_fully_paid"] = (len(remaining_items) == 0)
+                context["is_fully_paid"] = (len(remaining_items) == 0 or remaining_total <= 0.01)
+                if context["is_fully_paid"]:
+                    self.cart_service.clear_all(request)
             else:
+                self.cart_service.clear_all(request)
                 context["remaining_total"] = 0.0
                 context["is_fully_paid"] = True
 
@@ -166,16 +186,13 @@ class PaymentRouter:
     # ---------- ตัวช่วยภายใน ----------
 
     async def _build_order(self, request: Request) -> tuple[list[dict], float]:
-        """แปลงบิลของโต๊ะ (รวมที่สั่งเข้าครัวแล้วและของในตะกร้า) เป็นรายการสั่งซื้อ + ยอดรวม"""
+        """แปลงบิลของโต๊ะ (รวมที่สั่งเข้าครัวแล้วและของในตะกร้า) เป็นรายการสั่งซื้อ + ยอดรวมคงเหลือที่ต้องจ่ายจริง"""
         bill_items = self.cart_service.get_bill_items(request)
 
         items = []
-        total = 0.0
-
         for item_id, qty in bill_items.items():
             menu_item = await self.menu_service.get_by_id(int(item_id))
             if menu_item:
-                total += menu_item.price * qty
                 items.append({
                     "id": menu_item.id,
                     "name": menu_item.name,
@@ -185,4 +202,26 @@ class PaymentRouter:
                     "qty": qty,
                 })
 
-        return items, total
+        shared_ids = set(self.cart_service.get_shared_item_ids(request))
+        if not shared_ids:
+            for item in items:
+                cat = (item.get("category") or "").lower()
+                nm = (item.get("name") or "").lower()
+                if "เครื่องดื่ม" in cat or any(w in nm for w in ("น้ำ", "ชา", "โซดา", "น้ำแข็ง")):
+                    shared_ids.add(item["id"])
+
+        shared_items_cost = 0.0
+        personal_items_cost = 0.0
+        for item in items:
+            if item["id"] in shared_ids:
+                shared_items_cost += item["price"] * item["qty"]
+            else:
+                personal_items_cost += item["price"] * item["qty"]
+
+        shared_paid = self.cart_service.get_shared_paid(request)
+        unpaid_shared = max(0.0, round(shared_items_cost - shared_paid, 2))
+        remaining_total = round(personal_items_cost + unpaid_shared, 2)
+
+        return items, remaining_total
+
+

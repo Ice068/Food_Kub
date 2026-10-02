@@ -287,6 +287,33 @@ class TableQrTests(unittest.TestCase):
         checkout = self.client.get("/checkout?table=7")
         self.assertIn("150.00", checkout.text)
 
+    def test_second_person_pays_remaining_shared_amount(self):
+        import json
+        # โต๊ะ 9 สั่ง 2 จาน (จานละ 50 = 100)
+        self.client.post("/cart/add/1?table=9")
+        self.client.post("/cart/update/1?table=9", data={"quantity": 2})
+
+        # คนแรกขอจ่าย 1 จาน (50.-) + ของกลางที่ตั้งไว้ 20.- (โดยส่ง shared_item_ids=[1])
+        resp1 = self.client.post("/checkout/pay?table=9", data={
+            "method": "cash",
+            "split_mode": "split",
+            "selected_items": json.dumps({"1": 1}),
+            "shared_amount": "20.0",
+            "shared_note": "แชร์ของกลาง",
+            "shared_item_ids": json.dumps([1]),
+        })
+        self.assertEqual(resp1.status_code, 200)
+        self.assertIn("70.00", resp1.text)
+
+        # คนที่สองเปิดหน้า checkout ของโต๊ะ 9 ต้องเห็นว่ามียอดของกลางที่จ่ายไปแล้ว 20 บาท และยอดที่เหลือถูกหัก
+        checkout_resp = self.client.get("/checkout?table=9")
+        self.assertEqual(checkout_resp.status_code, 200)
+        self.assertIn("หักส่วนของกลางที่เพื่อนร่วมโต๊ะชำระแล้ว", checkout_resp.text)
+        self.assertIn("-20.00", checkout_resp.text)
+        # ยอดคงเหลือที่ต้องจ่ายจริงของโต๊ะคือ 30.00 บาท (50 - 20)
+        self.assertIn("30.00", checkout_resp.text)
+
 
 if __name__ == "__main__":
     unittest.main()
+

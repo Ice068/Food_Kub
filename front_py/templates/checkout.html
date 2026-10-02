@@ -314,8 +314,14 @@
                 {% endfor %}
             </tbody>
             <tfoot>
+                {% if shared_paid is defined and shared_paid > 0 %}
+                <tr style="color: #2b8a3e; background: #f4fbf6;">
+                    <th colspan="3">หักส่วนของกลางที่เพื่อนร่วมโต๊ะชำระแล้ว</th>
+                    <th>-{{ "%.2f"|format(shared_paid) }} บาท</th>
+                </tr>
+                {% endif %}
                 <tr>
-                    <th colspan="3">ยอดรวมทั้งหมดของโต๊ะ</th>
+                    <th colspan="3">ยอดคงเหลือที่ต้องชำระของโต๊ะ</th>
                     <th>{{ "%.2f"|format(total) }} บาท</th>
                 </tr>
             </tfoot>
@@ -423,6 +429,7 @@
         <input type="hidden" name="selected_items" id="input-selected-items" value="{}">
         <input type="hidden" name="shared_amount" id="input-shared-amount" value="0.0">
         <input type="hidden" name="shared_note" id="input-shared-note" value="">
+        <input type="hidden" name="shared_item_ids" id="input-shared-item-ids" value="[]">
 
         {% for m in methods %}
         <label class="payment-option">
@@ -459,13 +466,18 @@
 
     let currentMode = "full";
     let peopleCount = 2;
+    const initialSharedPaid = parseFloat("{{ shared_paid|default(0.0) }}") || 0.0;
+    const serverSharedItemIds = {{ shared_item_ids|tojson|default('[]') }};
 
-    // รายการของกลางเริ่มต้น (ตรวจจับหมวดเครื่องดื่ม หรือรายการน้ำ/น้ำแข็ง)
+    // รายการของกลางเริ่มต้น (ตรวจจับหมวดเครื่องดื่ม หรือรายการน้ำ/น้ำแข็ง หรือที่โต๊ะเคยเซ็ตไว้)
     let sharedItemIds = new Set();
     allCartItems.forEach(item => {
         const cat = (item.category || "").toLowerCase();
         const nm = (item.name || "").toLowerCase();
-        if (cat.includes("เครื่องดื่ม") || nm.includes("น้ำ") || nm.includes("ชา") || nm.includes("โซดา") || nm.includes("น้ำแข็ง")) {
+        if (
+            (Array.isArray(serverSharedItemIds) && serverSharedItemIds.includes(item.id)) ||
+            cat.includes("เครื่องดื่ม") || nm.includes("น้ำ") || nm.includes("ชา") || nm.includes("โซดา") || nm.includes("น้ำแข็ง")
+        ) {
             sharedItemIds.add(item.id);
         }
     });
@@ -539,7 +551,13 @@
 
         const badge = document.getElementById("shared-pool-total-badge");
         if (sharedTotal > 0) {
-            badge.textContent = `รวมของกลาง: ${sharedTotal.toFixed(2)} บาท`;
+            const paid = Math.min(sharedTotal, initialSharedPaid);
+            const remaining = Math.max(0, sharedTotal - paid);
+            if (paid > 0) {
+                badge.innerHTML = `รวมของกลาง: <strong>${sharedTotal.toFixed(2)}</strong> บาท <span style="color: #2b8a3e; margin-left: 6px;">(จ่ายแล้ว ${paid.toFixed(2)} บ. • เหลือต้องจ่าย ${remaining.toFixed(2)} บ.)</span>`;
+            } else {
+                badge.textContent = `รวมของกลาง: ${sharedTotal.toFixed(2)} บาท`;
+            }
         } else {
             badge.textContent = "ยังไม่มีของกลาง (กดปุ่ม ➗ ที่เมนูด้านบนเพื่อเพิ่ม)";
             container.innerHTML = "<span style='color: #868e96; font-size: 0.9rem;'>ไม่มีรายการของกลาง — คุณสามารถกดปุ่ม [➗ ตั้งเป็นของกลาง] ที่เมนูใดก็ได้ด้านบนเพื่อนำมาหารร่วมกัน</span>";
@@ -569,7 +587,7 @@
     }
 
     function changePeopleCount(delta) {
-        peopleCount = Math.max(2, Math.min(20, peopleCount + delta));
+        peopleCount = Math.max(1, Math.min(20, peopleCount + delta));
         document.getElementById("people-count-text").textContent = `${peopleCount} คน`;
         recalculateSplit();
     }
@@ -608,11 +626,14 @@
             }
         });
 
-        const perPersonShared = sharedTotal > 0 ? (sharedTotal / peopleCount) : 0;
+        const paid = Math.min(sharedTotal, initialSharedPaid);
+        const sharedRemaining = Math.max(0, sharedTotal - paid);
+
+        const perPersonShared = sharedRemaining > 0 ? (sharedRemaining / peopleCount) : 0;
         document.getElementById("shared-per-person-amount").textContent = perPersonShared.toFixed(2);
 
         const includeShared = document.getElementById("include-shared-check").checked;
-        const activeSharedAmount = (includeShared && sharedTotal > 0) ? perPersonShared : 0;
+        const activeSharedAmount = (includeShared && sharedRemaining > 0) ? perPersonShared : 0;
 
         const myTotal = personalSum + activeSharedAmount;
 
@@ -627,8 +648,11 @@
         // อัปเดต Hidden input
         document.getElementById("input-selected-items").value = JSON.stringify(selectedMap);
         document.getElementById("input-shared-amount").value = activeSharedAmount.toFixed(2);
-        document.getElementById("input-shared-note").value = includeShared && sharedTotal > 0
-            ? `ค่าน้ำ/ของกลาง ${sharedTotal.toFixed(2)} บ. หาร ${peopleCount} คน`
+        document.getElementById("input-shared-item-ids").value = JSON.stringify(Array.from(sharedItemIds));
+        document.getElementById("input-shared-note").value = includeShared && sharedRemaining > 0
+            ? (paid > 0
+                ? `ค่าน้ำ/ของกลาง ${sharedTotal.toFixed(2)} บ. (จ่ายแล้ว ${paid.toFixed(2)} บ. เหลือ ${sharedRemaining.toFixed(2)} บ.) หาร ${peopleCount} คน`
+                : `ค่าน้ำ/ของกลาง ${sharedTotal.toFixed(2)} บ. หาร ${peopleCount} คน`)
             : "";
     }
 
