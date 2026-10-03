@@ -5,5 +5,9 @@ class Settings:
     # ใช้สร้าง QR Code รับเงิน -- เปลี่ยนเป็นเลขของร้านจริงก่อนใช้งาน
     PROMPTPAY_ID: str = "0950927227"
 
+    # จำนวนโต๊ะทั้งหมดของร้าน
+    TOTAL_TABLES: int = 10
+
+
 
 settings = Settings()

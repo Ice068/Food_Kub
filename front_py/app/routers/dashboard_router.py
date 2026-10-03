@@ -123,10 +123,15 @@ class DashboardRouter:
         today_label = f"{DAYS_TH[now.weekday()]} {now.day} {MONTHS_TH[now.month - 1]} {now.year + 543}"
 
         menu_rows = [
-            {"id": m.id, "name": m.name, "category": m.category,
-             "price": m.price, "available": m.available}
-            for m in menu
-        ]
+    {
+        "id": m.id,
+        "name": m.name,
+        "category": m.category,
+        "price": m.price,
+        "available": getattr(m, "available", True),
+    }
+    for m in menu
+]
         availability = {m["id"]: m["available"] for m in menu_rows}
 
         view = {
