@@ -8,10 +8,13 @@
 </head>
 <body>
 <div class="container">
-    <!-- แก้ไข Header: จัดให้อยู่ซ้ายขวา และเพิ่มปุ่ม Logout -->
+    <!-- Header: ซ้าย = โลโก้ / ขวา = ปุ่มแดชบอร์ด + ออกจากระบบ -->
     <header class="navbar" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 20px;">
         <a href="/admin/" class="logo">🛠️ Admin - จัดการเมนู</a>
-        <a href="/admin/logout" style="color: white; background-color: #333; padding: 8px 15px; text-decoration: none; border-radius: 5px; font-size: 14px;">ออกจากระบบ 🚪</a>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <a href="/admin/dashboard" style="color: white; background-color: #333; padding: 8px 15px; text-decoration: none; border-radius: 5px; font-size: 14px;">📊 แดชบอร์ด</a>
+            <a href="/admin/logout" style="color: white; background-color: #333; padding: 8px 15px; text-decoration: none; border-radius: 5px; font-size: 14px;">ออกจากระบบ 🚪</a>
+        </div>
     </header>
 
     <main class="container">

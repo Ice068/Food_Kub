@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} | Food Kub</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/dashboard.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<!-- แถบเมนูลัด (Quick Navigation) -->
+<nav class="dash-nav" aria-label="เมนูลัด">
+    <a class="brand" href="/admin/dashboard">🍽️ Food Kub Admin</a>
+    <a class="nav-link is-current" href="/admin/dashboard" aria-current="page">📊 แดชบอร์ด</a>
+    <a class="nav-link" href="/admin/">🛠️ จัดการเมนู</a>
+    <a class="nav-link" href="/admin/tables">🔳 QR Code โต๊ะ</a>
+    <a class="nav-link" href="/" target="_blank" rel="noopener">🛎️ หน้าลูกค้า</a>
+    <span class="spacer"></span>
+    <a class="nav-link" href="/admin/logout">ออกจากระบบ 🚪</a>
+</nav>
+
+<main class="dash">
+    <div class="dash-head">
+        <h1>ภาพรวมร้านวันนี้ <span id="today-label" style="font-weight:400;font-size:1rem;color:#5c5f66"></span></h1>
+        <div id="live-status" class="live-status" role="status">
+            <span class="live-dot" aria-hidden="true"></span><span id="live-text">กำลังโหลด...</span>
+        </div>
+    </div>
+
+    <div id="dash-error" class="dash-error" role="alert" hidden></div>
+
+    <!-- 1) Daily Key Metrics -->
+    <section class="metric-grid" aria-label="สถิติภาพรวมรายวัน">
+        <article class="metric-card">
+            <div class="label">💰 ยอดขายรวมวันนี้</div>
+            <div class="value" id="m-revenue">–</div>
+            <div class="sub" id="m-revenue-sub">เทียบกับเมื่อวาน</div>
+        </article>
+        <article class="metric-card">
+            <div class="label">🧾 จำนวนบิลที่ปิดแล้ว</div>
+            <div class="value" id="m-bills">–</div>
+            <div class="sub" id="m-bills-sub">เทียบกับเมื่อวาน</div>
+        </article>
+        <article class="metric-card">
+            <div class="label">🪑 โต๊ะที่กำลังเปิดใช้งาน</div>
+            <div class="value" id="m-tables">–</div>
+            <div class="progress" aria-hidden="true"><span id="m-tables-bar" style="width:0"></span></div>
+            <div class="sub" id="m-tables-sub" style="margin-top:6px">&nbsp;</div>
+        </article>
+        <article class="metric-card">
+            <div class="label">🔥 เมนูขายดีประจำวัน</div>
+            <div class="value" id="m-top">–</div>
+            <div class="sub" id="m-top-sub">นับจากจานที่ลูกค้าสั่งวันนี้</div>
+        </article>
+    </section>
+
+    <!-- 2) มอนิเตอร์โต๊ะ & ออเดอร์สด + ประวัติการชำระเงินล่าสุด -->
+    <div class="dash-grid">
+        <section class="panel" aria-labelledby="h-live">
+            <h2 id="h-live">มอนิเตอร์โต๊ะ &amp; ออเดอร์สด</h2>
+            <p class="panel-sub">โต๊ะสีส้มคือมีบิลค้างอยู่ (สั่งแล้วยังไม่จ่ายครบ)</p>
+            <div id="table-grid" class="table-grid"></div>
+        </section>
+
+        <section class="panel" aria-labelledby="h-tx">
+            <h2 id="h-tx">ประวัติการชำระเงินล่าสุด</h2>
+            <p class="panel-sub">เงินเข้าวันนี้ 10 รายการล่าสุด</p>
+            <div class="tx-wrap">
+                <table class="tx-table">
+                    <thead>
+                        <tr><th>เวลา</th><th>โต๊ะ</th><th>วิธีชำระ</th><th class="num">ยอด (บาท)</th><th>สถานะ</th></tr>
+                    </thead>
+                    <tbody id="tx-body"></tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <!-- 3) กราฟแนวโน้มยอดขาย -->
+    <div class="dash-grid">
+        <section class="panel" aria-labelledby="h-trend">
+            <h2 id="h-trend">ยอดขาย 7 วันล่าสุด</h2>
+            <p class="panel-sub">รวมเงินเข้าทุกรายการของแต่ละวัน</p>
+            <div class="chart-box"><canvas id="chart-trend" aria-label="กราฟยอดขาย 7 วัน" role="img"></canvas></div>
+        </section>
+        <section class="panel" aria-labelledby="h-hour">
+            <h2 id="h-hour">ยอดขายรายชั่วโมงวันนี้</h2>
+            <p class="panel-sub">ช่วงเวลาไหนขายดีที่สุด</p>
+            <div class="chart-box"><canvas id="chart-hour" aria-label="กราฟยอดขายรายชั่วโมง" role="img"></canvas></div>
+        </section>
+    </div>
+
+    <!-- 4) เมนูยอดนิยม & เปิด-ปิดของหมด -->
+    <section class="panel" aria-labelledby="h-stock">
+        <h2 id="h-stock">เมนูยอดนิยม &amp; เปิด-ปิดของหมด</h2>
+        <p class="panel-sub">5 อันดับเมนูที่ลูกค้าสั่งมากที่สุดวันนี้ — ปิดสวิตช์เมื่อของหมด ลูกค้าจะกดสั่งเมนูนั้นไม่ได้ทันที</p>
+        <ul id="top-list" class="stock-list"></ul>
+        <details class="all-menu" id="all-menu">
+            <summary>เปิด-ปิดเมนูทั้งหมด (<span id="all-count">0</span> รายการ)</summary>
+            <ul id="all-list" class="stock-list"></ul>
+        </details>
+    </section>
+</main>
+
+<script>
+(() => {
+    const REFRESH_MS = 10000;
+    const $ = (id) => document.getElementById(id);
+    const esc = (v) => String(v).replace(/[&<>"']/g, (c) => (
+        { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]
+    ));
+    const money = (n) => "฿" + Number(n).toLocaleString("th-TH", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+    const METHODS = { cash: "เงินสด", qr_bank: "QR พร้อมเพย์" };
+
+    let pendingToggles = 0;   // กำลังบันทึกสวิตช์ -> ข้ามการวาดรายการเมนูรอบนี้กันสวิตช์เด้งกลับ
+    const lastHTML = {};      // กันวาด DOM ซ้ำถ้าข้อมูลไม่เปลี่ยน (รักษาสถานะ <details> / โฟกัส)
+
+    function setHTML(id, html) {
+        if (lastHTML[id] === html) return;
+        lastHTML[id] = html;
+        $(id).innerHTML = html;
+    }
+
+    function trend(pct, prevText) {
+        if (pct === null || pct === undefined) return prevText + " (เมื่อวานยังไม่มียอดให้เทียบ)";
+        if (pct === 0) return "เท่ากับเมื่อวาน · " + prevText;
+        const cls = pct > 0 ? "trend-up" : "trend-down";
+        const arrow = pct > 0 ? "▲" : "▼";
+        return `<span class="${cls}">${arrow} ${Math.abs(pct)}%</span> จากเมื่อวาน · ${prevText}`;
+    }
+
+    // ---------- การ์ดตัวเลข ----------
+    function renderMetrics(d) {
+        $("m-revenue").textContent = money(d.revenue.today);
+        $("m-revenue-sub").innerHTML = trend(d.revenue.change_pct, "เมื่อวาน " + money(d.revenue.yesterday));
+
+        $("m-bills").innerHTML = `${d.bills.today} <small>บิล</small>`;
+        $("m-bills-sub").innerHTML = trend(d.bills.change_pct, `เมื่อวาน ${d.bills.yesterday} บิล`);
+
+        const { active, total } = d.tables;
+        $("m-tables").innerHTML = `${active} / ${total} <small>โต๊ะ</small>`;
+        $("m-tables-bar").style.width = Math.min(100, total ? (active / total) * 100 : 0) + "%";
+        $("m-tables-sub").textContent = active ? `ว่าง ${Math.max(0, total - active)} โต๊ะ` : "ตอนนี้ไม่มีโต๊ะที่มีบิลค้าง";
+
+        if (d.top_dish) {
+            $("m-top").innerHTML = `${esc(d.top_dish.name)} <small>(${d.top_dish.qty} จาน)</small>`;
+            $("m-top-sub").textContent = "นับจากจานที่ลูกค้าสั่งวันนี้";
+        } else {
+            $("m-top").innerHTML = '<small>ยังไม่มีออเดอร์วันนี้</small>';
+            $("m-top-sub").textContent = "จะแสดงเมื่อมีลูกค้าสั่งอาหาร";
+        }
+    }
+
+    // ---------- มอนิเตอร์โต๊ะ ----------
+    function renderTables(d) {
+        const liveByTable = new Map(d.tables.live.map((t) => [t.table, t]));
+        const numbers = new Set(Array.from({ length: d.tables.total }, (_, i) => i + 1));
+        d.tables.live.forEach((t) => numbers.add(t.table));   // เผื่อโต๊ะเลขเกินจำนวนที่ตั้งไว้
+
+        const tiles = [...numbers].sort((a, b) => a - b).map((n) => {
+            const t = liveByTable.get(n);
+            if (!t) {
+                return `<div class="table-tile"><div class="t-name">โต๊ะ ${n}<span class="t-state">ว่าง</span></div><div class="t-free">พร้อมรับลูกค้า</div></div>`;
+            }
+            const shown = t.items.slice(0, 4).map((i) => `<li>${esc(i.name)} ×${i.qty}</li>`).join("");
+            const more = t.items.length > 4 ? `<li>+${t.items.length - 4} รายการ</li>` : "";
+            return `<div class="table-tile is-active"><div class="t-name">โต๊ะ ${n}<span class="t-state">ใช้งาน</span></div><div class="t-total">${money(t.total)}</div><ul>${shown}${more}</ul></div>`;
+        });
+        setHTML("table-grid", tiles.join(""));
+    }
+
+    // ---------- รายการเงินเข้า ----------
+    function renderTransactions(d) {
+        if (!d.recent_transactions.length) {
+            setHTML("tx-body", '<tr><td colspan="5" class="empty">ยังไม่มีรายการชำระเงินวันนี้</td></tr>');
+            return;
+        }
+        setHTML("tx-body", d.recent_transactions.map((t) => {
+            const time = new Date(t.created_at).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+            const badge = t.bill_closed
+                ? '<span class="badge closed">ปิดบิล</span>'
+                : '<span class="badge partial">จ่ายบางส่วน</span>';
+            return `<tr><td>${time}</td><td>${t.table ?? "–"}</td><td>${esc(METHODS[t.method] || t.method)}</td><td class="num">${money(t.amount)}</td><td>${badge}</td></tr>`;
+        }).join(""));
+    }
+
+    // ---------- กราฟ ----------
+    const charts = {};
+    function upsertChart(key, canvasId, config) {
+        if (typeof Chart === "undefined") return;   // โหลด Chart.js ไม่ได้ (ออฟไลน์) -> ข้ามกราฟ ไม่ให้หน้าพัง
+        if (charts[key]) {
+            charts[key].data = config.data;
+            charts[key].update("none");
+        } else {
+            charts[key] = new Chart($(canvasId), config);
+        }
+    }
+
+    function renderCharts(d) {
+        const days = d.sales_trend;
+        upsertChart("trend", "chart-trend", {
+            type: "bar",
+            data: {
+                labels: days.map((x) => new Date(x.date + "T00:00:00").toLocaleDateString("th-TH", { weekday: "short", day: "numeric", month: "short" })),
+                datasets: [{
+                    label: "ยอดขาย (บาท)",
+                    data: days.map((x) => x.total),
+                    backgroundColor: days.map((_, i) => (i === days.length - 1 ? "#d9480f" : "#ffc078")),
+                    borderRadius: 6,
+                }],
+            },
+            options: {
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => " " + money(c.parsed.y) } } },
+                scales: { y: { beginAtZero: true, ticks: { callback: (v) => "฿" + v } } },
+            },
+        });
+
+        const hours = d.sales_by_hour;
+        const withSales = hours.filter((h) => h.total > 0).map((h) => h.hour);
+        const from = Math.min(8, ...withSales);
+        const to = Math.max(21, ...withSales);
+        const slice = hours.filter((h) => h.hour >= from && h.hour <= to);
+        upsertChart("hour", "chart-hour", {
+            type: "line",
+            data: {
+                labels: slice.map((h) => String(h.hour).padStart(2, "0") + ":00"),
+                datasets: [{
+                    label: "ยอดขาย (บาท)",
+                    data: slice.map((h) => h.total),
+                    borderColor: "#d9480f",
+                    backgroundColor: "rgba(217, 72, 15, 0.15)",
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 3,
+                }],
+            },
+            options: {
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => " " + money(c.parsed.y) } } },
+                scales: { y: { beginAtZero: true, ticks: { callback: (v) => "฿" + v } } },
+            },
+        });
+    }
+
+    // ---------- Top 5 + เปิด/ปิดของหมด ----------
+    function switchHTML(id, available) {
+        return `<label class="switch"><input type="checkbox" data-item="${id}" ${available ? "checked" : ""} aria-label="เปิดขายเมนูนี้"><span class="track"></span><span class="s-text">${available ? "เปิดขาย" : "ของหมด"}</span></label>`;
+    }
+
+    function renderStock(d) {
+        if (pendingToggles > 0) return;
+        const avail = new Map(d.menu.map((m) => [m.id, m.available]));
+        const max = Math.max(1, ...d.top_dishes.map((x) => x.qty));
+
+        setHTML("top-list", d.top_dishes.length
+            ? d.top_dishes.map((x, i) => {
+                const on = avail.has(x.id) ? avail.get(x.id) : true;
+                return `<li class="stock-row ${on ? "" : "is-off"}"><span class="rank">${i + 1}</span><div><div class="stock-name">${esc(x.name)}</div><div class="stock-meta">สั่งแล้ว ${x.qty} จาน</div><div class="stock-bar"><span style="width:${(x.qty / max) * 100}%"></span></div></div>${avail.has(x.id) ? switchHTML(x.id, on) : '<span class="stock-meta">เมนูถูกลบแล้ว</span>'}</li>`;
+            }).join("")
+            : '<li class="empty">ยังไม่มีออเดอร์วันนี้ — เมื่อมีลูกค้าสั่ง 5 อันดับแรกจะแสดงที่นี่</li>');
+
+        $("all-count").textContent = d.menu.length;
+        setHTML("all-list", d.menu.length
+            ? d.menu.map((m) => `<li class="stock-row ${m.available ? "" : "is-off"}"><div><div class="stock-name">${esc(m.name)}</div><div class="stock-meta">${esc(m.category)} · ${money(m.price)}</div></div>${switchHTML(m.id, m.available)}</li>`).join("")
+            : '<li class="empty">ยังไม่มีเมนู</li>');
+    }
+
+    async function toggleAvailability(input) {
+        const itemId = input.dataset.item;
+        const wanted = input.checked;
+        pendingToggles++;
+        try {
+            const resp = await fetch(`/admin/dashboard/availability/${itemId}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ available: wanted }),
+            });
+            if (!resp.ok) throw new Error(resp.status);
+        } catch (err) {
+            input.checked = !wanted;
+            alert("บันทึกสถานะเมนูไม่สำเร็จ กรุณาลองอีกครั้ง");
+        } finally {
+            pendingToggles--;
+            refresh();
+        }
+    }
+
+    document.addEventListener("change", (e) => {
+        if (e.target.matches('input[type="checkbox"][data-item]')) toggleAvailability(e.target);
+    });
+
+    // ---------- โหลดข้อมูล ----------
+    function setStatus(ok, text) {
+        $("live-status").classList.toggle("is-error", !ok);
+        $("live-text").textContent = text;
+    }
+
+    async function refresh() {
+        try {
+            const resp = await fetch("/admin/dashboard/data", { cache: "no-store" });
+            if (resp.status === 401) { location.href = "/admin/login"; return; }
+            const d = await resp.json();
+            if (!resp.ok) throw new Error(d.error || "โหลดข้อมูลไม่สำเร็จ");
+
+            $("dash-error").hidden = true;
+            renderMetrics(d);
+            renderTables(d);
+            renderTransactions(d);
+            renderCharts(d);
+            renderStock(d);
+            $("today-label").textContent = "· " + new Date().toLocaleDateString("th-TH", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+            setStatus(true, "อัปเดตล่าสุด " + new Date().toLocaleTimeString("th-TH") + " · รีเฟรชอัตโนมัติทุก 10 วินาที");
+        } catch (err) {
+            $("dash-error").hidden = false;
+            $("dash-error").textContent = err.message || "โหลดข้อมูลไม่สำเร็จ";
+            setStatus(false, "เชื่อมต่อไม่ได้ กำลังลองใหม่...");
+        }
+    }
+
+    refresh();
+    setInterval(refresh, REFRESH_MS);
+})();
+</script>
+</body>
+</html>

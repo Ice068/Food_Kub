@@ -97,3 +97,11 @@ class MenuService:
             doc_ref.delete()
             return True
         return False
+
+    def set_availability(self, item_id: int, available: bool) -> MenuItem | None:
+        """เปิด/ปิดการขายเมนู (ของหมด) -- คืน None ถ้าไม่พบเมนู"""
+        doc_ref = self.db.collection(self.collection_name).document(str(item_id))
+        if not doc_ref.get().exists:
+            return None
+        doc_ref.update({"available": bool(available)})
+        return self.get_by_id(item_id)
