@@ -145,6 +145,7 @@ class CartRouter:
                 await self.stats_service.sync_live_order(
                     table_id,
                     active_items,
+                    status="dining",
                 )
         except httpx.HTTPError:
             logger.exception(

@@ -207,6 +207,13 @@ class PaymentRouter:
         )
 
         response.headers["Cache-Control"] = "no-store"
+
+        await self.stats_service.sync_live_order(
+            getattr(request.state, "table_id", None),
+            items,
+            status="waiting_payment",
+        )
+
         return response
 
     async def process_payment(
@@ -575,7 +582,9 @@ class PaymentRouter:
                 )
 
                 synced = (
-                    await self.stats_service.sync_live_order(table, live)
+                    await self.stats_service.sync_live_order(
+                        table, live, status="waiting_payment",
+                    )
                     if table is not None
                     else True
                 )

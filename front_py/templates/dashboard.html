@@ -60,7 +60,7 @@
     <div class="dash-grid">
         <section class="panel" aria-labelledby="h-live">
             <h2 id="h-live">มอนิเตอร์โต๊ะ &amp; ออเดอร์สด</h2>
-            <p class="panel-sub">โต๊ะสีส้มคือมีบิลค้างอยู่ (สั่งแล้วยังไม่จ่ายครบ)</p>
+            <p class="panel-sub">🟢 ว่าง · 🟡 กำลังรับประทาน · 🔴 รอชำระ</p>
             <div id="table-grid" class="table-grid"></div>
         </section>
 
@@ -157,16 +157,20 @@
     function renderTables(d) {
         const liveByTable = new Map(d.tables.live.map((t) => [t.table, t]));
         const numbers = new Set(Array.from({ length: d.tables.total }, (_, i) => i + 1));
-        d.tables.live.forEach((t) => numbers.add(t.table));   // เผื่อโต๊ะเลขเกินจำนวนที่ตั้งไว้
+        d.tables.live.forEach((t) => numbers.add(t.table));
 
         const tiles = [...numbers].sort((a, b) => a - b).map((n) => {
             const t = liveByTable.get(n);
             if (!t) {
-                return `<div class="table-tile"><div class="t-name">โต๊ะ ${n}<span class="t-state">ว่าง</span></div><div class="t-free">พร้อมรับลูกค้า</div></div>`;
+                return `<div class="table-tile is-free"><div class="t-name">โต๊ะ ${n}<span class="t-state">ว่าง</span></div><div class="t-free">พร้อมรับลูกค้า</div></div>`;
             }
+
+            const waiting = t.status === "waiting_payment";
+            const stateClass = waiting ? "is-waiting" : "is-dining";
+            const stateLabel = waiting ? "รอชำระ" : "กำลังรับประทาน";
             const shown = t.items.slice(0, 4).map((i) => `<li>${esc(i.name)} ×${i.qty}</li>`).join("");
             const more = t.items.length > 4 ? `<li>+${t.items.length - 4} รายการ</li>` : "";
-            return `<div class="table-tile is-active"><div class="t-name">โต๊ะ ${n}<span class="t-state">ใช้งาน</span></div><div class="t-total">${money(t.total)}</div><ul>${shown}${more}</ul></div>`;
+            return `<div class="table-tile ${stateClass}"><div class="t-name">โต๊ะ ${n}<span class="t-state">${stateLabel}</span></div><div class="t-total">${money(t.total)}</div><ul>${shown}${more}</ul></div>`;
         });
         setHTML("table-grid", tiles.join(""));
     }

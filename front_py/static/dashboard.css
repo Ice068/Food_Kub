@@ -46,10 +46,14 @@
 /* โต๊ะ & ออเดอร์สด */
 .table-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
 .table-tile { border: 1px solid #e9ecef; border-radius: 12px; padding: 12px; background: #f8f9fa; min-height: 92px; }
-.table-tile .t-name { font-weight: 700; display: flex; justify-content: space-between; align-items: center; }
+.table-tile .t-name { font-weight: 700; display: flex; flex-wrap: wrap; gap: 6px; justify-content: space-between; align-items: center; }
 .table-tile .t-state { font-size: 0.75rem; padding: 2px 8px; border-radius: 99px; background: #e9ecef; color: #495057; }
-.table-tile.is-active { background: #fff4e6; border-color: #ffa94d; }
-.table-tile.is-active .t-state { background: #d9480f; color: #fff; }
+.table-tile.is-free { background: #ebfbee; border-color: #8ce99a; }
+.table-tile.is-free .t-state { background: #d3f9d8; color: #2b8a3e; }
+.table-tile.is-dining { background: #fff9db; border-color: #ffd43b; }
+.table-tile.is-dining .t-state { background: #ffec99; color: #674d00; }
+.table-tile.is-waiting { background: #fff5f5; border-color: #ffa8a8; }
+.table-tile.is-waiting .t-state { background: #ffe3e3; color: #c92a2a; }
 .table-tile .t-total { font-weight: 700; color: #d9480f; margin: 6px 0 4px; }
 .table-tile ul { list-style: none; font-size: 0.8rem; color: #495057; }
 .table-tile li { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
