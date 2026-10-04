@@ -60,6 +60,8 @@ def _trend(change_pct) -> dict:
     }
 
 
+# ---------- Payload ----------
+
 class AvailabilityPayload(BaseModel):
     available: StrictBool
 
@@ -67,6 +69,10 @@ class AvailabilityPayload(BaseModel):
 class KitchenStatusPayload(BaseModel):
     status: Literal["cooking", "ready", "served"]
     expected_qty: int = Field(..., gt=0)
+    opened_at: str = Field(..., min_length=1)
+
+
+class ResetTablePayload(BaseModel):
     opened_at: str = Field(..., min_length=1)
 
 
@@ -116,6 +122,12 @@ class DashboardRouter:
             "/tables/{table}/items/{item_id}/kitchen-status",
             self.set_kitchen_status,
             methods=["PUT"],
+        )
+
+        self.router.add_api_route(
+            "/tables/{table}/reset",
+            self.reset_table,
+            methods=["POST"],
         )
 
     @staticmethod
@@ -316,6 +328,66 @@ class DashboardRouter:
                 503,
             )
 
+    # ---------- Reset Table ----------
+
+    async def reset_table(
+        self,
+        table: int,
+        payload: ResetTablePayload,
+        admin_token: str | None = Cookie(None),
+    ):
+        """รับคำสั่งเคลียร์โต๊ะจากหน้า Admin
+
+        Backend ตรวจว่าชำระครบและยังเป็นบิลเดียวกันก่อนเคลียร์
+        """
+        if not self._is_admin(admin_token):
+            return self._json(
+                {"error": "กรุณาเข้าสู่ระบบ Admin"},
+                401,
+            )
+
+        try:
+            result = await self.stats_service.reset_table(
+                table,
+                payload.opened_at,
+            )
+
+            return self._json(result)
+
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code == 409:
+                return self._json(
+                    {
+                        "error": (
+                            "โต๊ะยังจ่ายไม่ครบ หรือบิลเปลี่ยนแล้ว "
+                            "กรุณาโหลดข้อมูลใหม่"
+                        )
+                    },
+                    409,
+                )
+
+            if exc.response.status_code == 404:
+                return self._json(
+                    {
+                        "error": (
+                            "โต๊ะนี้ว่างแล้ว "
+                            "กรุณาโหลดข้อมูลใหม่"
+                        )
+                    },
+                    404,
+                )
+
+            return self._json(
+                {"error": "เคลียร์โต๊ะไม่สำเร็จ"},
+                503,
+            )
+
+        except httpx.HTTPError:
+            return self._json(
+                {"error": "ติดต่อ Backend ไม่ได้ กรุณาลองใหม่"},
+                503,
+            )
+
     # ---------- ข้อมูลสำหรับเรนเดอร์หน้า ----------
 
     def _build_view(
@@ -391,7 +463,7 @@ class DashboardRouter:
 
         view["top_dish"] = data["top_dish"]
 
-        # โต๊ะทั้งหมดและรายการที่เปิดอยู่
+        # โต๊ะทั้งหมด รวมโต๊ะชำระแล้วที่ยังรอเคลียร์
         live = {
             table["table"]: table
             for table in data["tables"]["live"]

@@ -8,6 +8,9 @@ from app.core.config import settings
 class StatsService:
     """ส่งออเดอร์ เงินเข้า และบิลที่เปิดอยู่ไปเก็บที่ Backend
     พร้อมดึงสถิติมาแสดงบนแดชบอร์ด
+
+    การส่งข้อมูลจาก flow ลูกค้าจะคืน False หากส่งไม่สำเร็จ
+    ส่วนคำสั่งจาก Dashboard จะส่ง HTTP error ให้ Router จัดการ
     """
 
     def __init__(self):
@@ -85,7 +88,10 @@ class StatsService:
         dining = กำลังรับประทาน
         waiting_payment = รอชำระ
         ไม่ส่ง status = รักษาสถานะเดิม หรือ dining สำหรับโต๊ะใหม่
-        items ว่าง = โต๊ะว่าง ตามพฤติกรรมเดิม
+
+        items ว่างยังทำให้โต๊ะว่างตามพฤติกรรมเดิม
+        หลังชำระครบต้องใช้ mark_table_paid() แทน
+        เพื่อเก็บโต๊ะไว้จนพนักงานกด Reset
         """
         if table is None:
             return False
@@ -100,6 +106,51 @@ class StatsService:
             f"/api/stats/live-orders/{table}",
             payload,
         )
+
+    # ---------- ชำระครบ รอเคลียร์โต๊ะ ----------
+
+    async def mark_table_paid(
+        self,
+        table: int,
+        paid_items: list[dict],
+    ) -> bool:
+        """เรียกหลังยืนยันการชำระครบแล้ว
+
+        ส่งรายการที่ชำระให้ Backend ตรวจสอบ
+        และเก็บโต๊ะเป็น ชำระแล้ว · รอเคลียร์
+
+        หากส่งไม่สำเร็จ คืน False เพื่อให้ผู้เรียกติดตามแก้ไข
+        """
+        return await self._write(
+            "POST",
+            f"/api/stats/live-orders/{table}/paid",
+            {
+                "items": paid_items,
+            },
+        )
+
+    # ---------- Reset Table จาก Dashboard ----------
+
+    async def reset_table(
+        self,
+        table: int,
+        opened_at: str,
+    ) -> dict:
+        """เคลียร์โต๊ะหลังลูกค้าชำระครบและลุกออก
+
+        opened_at ใช้ตรวจว่าบิลยังตรงกับที่พนักงานเปิดดู
+        หากเคลียร์ไม่สำเร็จ ส่ง HTTP error ให้ DashboardRouter จัดการ
+        """
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(
+                f"{self.backend_url}/api/stats/live-orders/{table}/reset",
+                json={
+                    "opened_at": opened_at,
+                },
+            )
+
+            resp.raise_for_status()
+            return resp.json()
 
     # ---------- เปลี่ยนสถานะอาหาร ----------
 
@@ -118,7 +169,7 @@ class StatsService:
         served = เสิร์ฟแล้ว
 
         expected_qty และ opened_at ใช้ตรวจว่าบิลยังตรงกัน
-        หากบันทึกไม่สำเร็จ จะส่ง HTTP error ให้ DashboardRouter จัดการ
+        หากบันทึกไม่สำเร็จ ส่ง HTTP error ให้ DashboardRouter จัดการ
         """
         async with httpx.AsyncClient(timeout=10.0) as client:
             resp = await client.put(

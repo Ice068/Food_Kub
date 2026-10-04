@@ -30,7 +30,7 @@ class StatsService:
         self.order_events = "order_events"
         self.live_orders = "live_orders"
 
-    # ---------- เขียนข้อมูล ----------
+    # ---------- บันทึกออเดอร์ ----------
 
     def record_order(
         self,
@@ -39,14 +39,18 @@ class StatsService:
     ) -> dict:
         """บันทึกรายการอาหารที่ส่งเข้าครัวแต่ละรอบ"""
         now = _now()
+
         doc = {
             "table": table,
             "items": [self._clean_item(i) for i in items],
             "created_at": now.isoformat(),
             "date": _day(now),
         }
+
         self.db.collection(self.order_events).document().set(doc)
         return doc
+
+    # ---------- บันทึกการชำระเงิน ----------
 
     def record_transaction(
         self,
@@ -58,6 +62,7 @@ class StatsService:
     ) -> dict:
         """บันทึกเงินเข้า โดย bill_closed=True เมื่อจ่ายครบ"""
         now = _now()
+
         doc = {
             "table": table,
             "method": method,
@@ -67,9 +72,13 @@ class StatsService:
             "created_at": now.isoformat(),
             "date": _day(now),
         }
+
         ref = self.db.collection(self.transactions).document()
         ref.set(doc)
+
         return {"id": ref.id, **doc}
+
+    # ---------- อัปเดตบิลและสถานะโต๊ะ ----------
 
     def set_live_order(
         self,
@@ -81,15 +90,19 @@ class StatsService:
 
         dining = กำลังรับประทาน
         waiting_payment = รอชำระ
-        items ว่าง = โต๊ะว่าง ตามพฤติกรรมเดิม
 
         เมนูใหม่หรือจำนวนเพิ่ม เริ่มที่ cooking
         จำนวนเท่าเดิมหรือลดลง รักษาสถานะอาหารเดิม
+
+        items ว่างยังลบโต๊ะตามพฤติกรรมเดิม
+        หลังจ่ายครบต้องเรียก mark_table_paid แทนส่ง items ว่าง
+        เพื่อเก็บโต๊ะไว้จนพนักงานกด Reset
         """
         if status not in (None, "dining", "waiting_payment"):
             raise ValueError("Invalid table status")
 
         ref = self.db.collection(self.live_orders).document(str(table))
+
         clean = [
             self._clean_item(i)
             for i in items
@@ -99,6 +112,7 @@ class StatsService:
         @transactional
         def save(transaction):
             existing = ref.get(transaction=transaction)
+
             previous = (
                 (existing.to_dict() or {})
                 if existing.exists
@@ -133,6 +147,8 @@ class StatsService:
 
             now = _now().isoformat()
 
+            # เขียนบิลที่ยังมีรายการค้างชำระ
+            # ไม่คง paid=True จากบิลที่จ่ายครบไปแล้ว
             transaction.set(ref, {
                 "table": table,
                 "items": merged,
@@ -142,6 +158,97 @@ class StatsService:
             })
 
         save(self.db.transaction())
+
+    # ---------- ชำระครบ รอเคลียร์โต๊ะ ----------
+
+    def mark_table_paid(
+        self,
+        table: int,
+        paid_items: list[dict],
+    ) -> None:
+        """เรียกหลังยืนยันว่าชำระครบแล้วเท่านั้น
+
+        ล้างรายการค้างชำระ แต่เก็บโต๊ะไว้เป็น paid=True
+        เพื่อให้พนักงานกด Reset หลังลูกค้าลุกออก
+
+        ตรวจรายการปัจจุบันกับรายการที่ชำระ
+        ป้องกันล้างออเดอร์ใหม่ที่เพิ่มระหว่างชำระเงิน
+        """
+        ref = self.db.collection(self.live_orders).document(str(table))
+
+        @transactional
+        def save(transaction):
+            snapshot = ref.get(transaction=transaction)
+
+            previous = (
+                (snapshot.to_dict() or {})
+                if snapshot.exists
+                else {}
+            )
+
+            quantities = defaultdict(int)
+
+            for item in paid_items:
+                quantities[int(item["id"])] += int(item["qty"])
+
+            has_unpaid_orders = any(
+                item["qty"] > quantities[item["id"]]
+                for item in previous.get("items", [])
+            )
+
+            if has_unpaid_orders:
+                raise ValueError("New unpaid orders exist")
+
+            now = _now().isoformat()
+
+            transaction.set(ref, {
+                "table": table,
+                "items": [],
+                "status": "waiting_payment",
+                "paid": True,
+                "opened_at": previous.get("opened_at") or now,
+                "updated_at": now,
+            })
+
+        save(self.db.transaction())
+
+    # ---------- Reset Table ----------
+
+    def reset_table(
+        self,
+        table: int,
+        opened_at: str,
+    ) -> bool:
+        """เคลียร์เฉพาะโต๊ะที่ชำระครบแล้ว
+
+        ตรวจ opened_at ว่ายังเป็นบิลเดียวกับที่พนักงานเปิดดู
+        ลบเฉพาะ live_orders ไม่ลบประวัติยอดขายหรือการชำระเงิน
+
+        คืน False เมื่อโต๊ะว่างอยู่แล้ว
+        """
+        ref = self.db.collection(self.live_orders).document(str(table))
+
+        @transactional
+        def reset(transaction):
+            snapshot = ref.get(transaction=transaction)
+
+            if not snapshot.exists:
+                return False
+
+            data = snapshot.to_dict() or {}
+
+            if data.get("opened_at") != opened_at:
+                raise ValueError("Table bill has changed")
+
+            if not data.get("paid") or data.get("items"):
+                raise ValueError("Table is not fully paid")
+
+            transaction.delete(ref)
+            return True
+
+        return reset(self.db.transaction())
+
+    # ---------- อัปเดตสถานะอาหาร ----------
 
     def set_kitchen_status(
         self,
@@ -232,6 +339,7 @@ class StatsService:
             sum(t["amount"] for t in today_tx),
             2,
         )
+
         revenue_yesterday = round(
             sum(t["amount"] for t in yesterday_tx),
             2,
@@ -240,6 +348,7 @@ class StatsService:
         bills_today = sum(
             1 for t in today_tx if t.get("bill_closed")
         )
+
         bills_yesterday = sum(
             1 for t in yesterday_tx if t.get("bill_closed")
         )
@@ -266,6 +375,7 @@ class StatsService:
                 ),
             },
             "tables": {
+                # รวมโต๊ะชำระแล้วที่ยังรอพนักงานเคลียร์
                 "active": len(live),
                 "total": settings.TOTAL_TABLES,
                 "live": live,
@@ -341,6 +451,7 @@ class StatsService:
                         "qty": 0,
                     },
                 )
+
                 row["qty"] += item["qty"]
 
         ranked = sorted(
@@ -367,12 +478,17 @@ class StatsService:
                 for item in data.get("items", [])
             ]
 
-            if not items:
+            paid = bool(data.get("paid", False))
+
+            # โต๊ะจ่ายครบยังต้องแสดง แม้รายการค้างชำระว่าง
+            # จนกว่าพนักงานจะกด Reset
+            if not items and not paid:
                 continue
 
             tables.append({
                 "table": data.get("table"),
                 "status": data.get("status", "dining"),
+                "paid": paid,
                 "items": items,
                 "total": round(
                     sum(i["price"] * i["qty"] for i in items),
@@ -401,6 +517,7 @@ class StatsService:
                 .astimezone(TH_TZ)
                 .hour
             )
+
             totals[hour] += t["amount"]
 
         return [

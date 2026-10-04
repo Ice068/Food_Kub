@@ -7,9 +7,12 @@ from app.services.menu_service import MenuService
 from app.services.daily.stats_service import StatsService
 
 router = APIRouter(prefix="/api/stats", tags=["Stats"])
+
 stats_service = StatsService()
 menu_service = MenuService()
 
+
+# ---------- Payload ----------
 
 class Line(BaseModel):
     id: int
@@ -46,14 +49,31 @@ class KitchenStatusPayload(BaseModel):
     opened_at: str = Field(..., min_length=1)
 
 
+class PaidTablePayload(BaseModel):
+    """รายการที่ชำระครบแล้ว ใช้ตรวจว่ามีออเดอร์ใหม่ค้างอยู่หรือไม่"""
+
+    items: list[Line] = Field(..., min_length=1)
+
+
+class ResetTablePayload(BaseModel):
+    """ระบุบิลที่พนักงานกำลังเคลียร์ ป้องกันการเคลียร์ผิดบิล"""
+
+    opened_at: str = Field(..., min_length=1)
+
+
+# ---------- บันทึกออเดอร์ ----------
+
 @router.post("/orders")
 async def record_order(payload: OrderPayload):
     stats_service.record_order(
         payload.table,
-        [i.model_dump() for i in payload.items],
+        [item.model_dump() for item in payload.items],
     )
+
     return {"status": "success"}
 
+
+# ---------- บันทึกการชำระเงิน ----------
 
 @router.post("/transactions")
 async def record_transaction(payload: TransactionPayload):
@@ -61,21 +81,33 @@ async def record_transaction(payload: TransactionPayload):
         payload.table,
         payload.method,
         payload.amount,
-        [i.model_dump() for i in payload.items],
+        [item.model_dump() for item in payload.items],
         payload.bill_closed,
     )
-    return {"status": "success", "id": tx["id"]}
 
+    return {
+        "status": "success",
+        "id": tx["id"],
+    }
+
+
+# ---------- อัปเดตบิลและสถานะโต๊ะ ----------
 
 @router.put("/live-orders/{table}")
-async def set_live_order(table: int, payload: LiveOrderPayload):
+async def set_live_order(
+    table: int,
+    payload: LiveOrderPayload,
+):
     stats_service.set_live_order(
         table,
-        [i.model_dump() for i in payload.items],
+        [item.model_dump() for item in payload.items],
         payload.status,
     )
+
     return {"status": "success"}
 
+
+# ---------- อัปเดตสถานะอาหาร ----------
 
 @router.put("/live-orders/{table}/items/{item_id}/kitchen-status")
 async def set_kitchen_status(
@@ -109,10 +141,73 @@ async def set_kitchen_status(
     }
 
 
+# ---------- ชำระครบ รอพนักงานเคลียร์โต๊ะ ----------
+
+@router.post("/live-orders/{table}/paid")
+async def mark_table_paid(
+    table: int,
+    payload: PaidTablePayload,
+):
+    """
+    เรียกหลังระบบยืนยันว่าชำระครบแล้วเท่านั้น
+    โต๊ะยังคงใช้งานอยู่จนพนักงานกด Reset
+    """
+    try:
+        stats_service.mark_table_paid(
+            table,
+            [item.model_dump() for item in payload.items],
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail=str(exc),
+        ) from exc
+
+    return {"status": "success"}
+
+
+# ---------- Reset Table ----------
+
+@router.post("/live-orders/{table}/reset")
+async def reset_table(
+    table: int,
+    payload: ResetTablePayload,
+):
+    """
+    เคลียร์โต๊ะที่ชำระครบแล้ว หลังลูกค้าลุกออก
+    ไม่ลบประวัติยอดขายหรือการชำระเงิน
+    """
+    try:
+        reset = stats_service.reset_table(
+            table,
+            payload.opened_at,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail=str(exc),
+        ) from exc
+
+    if not reset:
+        raise HTTPException(
+            status_code=404,
+            detail="Table already free",
+        )
+
+    return {
+        "status": "success",
+        "table": table,
+    }
+
+
+# ---------- ข้อมูล Dashboard ----------
+
 @router.get("/dashboard")
 async def get_dashboard():
     return stats_service.get_dashboard()
 
+
+# ---------- เปิด/ปิดขายเมนู ----------
 
 @router.post("/availability/{item_id}")
 async def set_availability(

@@ -1,4 +1,4 @@
-/* แดชบอร์ดเจ้าของร้าน */
+/* ---------- แดชบอร์ด ---------- */
 .dash {
     max-width: 1280px;
     margin: 0 auto;
@@ -250,7 +250,7 @@
     color: #674d00;
 }
 
-/* รอชำระเงิน */
+/* รอชำระ หรือชำระแล้วแต่ยังรอเคลียร์โต๊ะ */
 .table-tile.is-waiting {
     background: #fff5f5;
     border-color: #ffa8a8;
@@ -304,6 +304,34 @@
 
 .table-open:focus-visible,
 .table-dialog-close:focus-visible {
+    outline: 3px solid #212529;
+    outline-offset: 2px;
+}
+
+/* ---------- ปุ่ม Reset Table ---------- */
+.table-reset {
+    width: 100%;
+    margin-top: 8px;
+    padding: 8px 6px;
+    border: 1px solid #2b8a3e;
+    border-radius: 8px;
+    background: #ebfbee;
+    color: #2b8a3e;
+    font: inherit;
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+
+.table-reset:hover {
+    background: #d3f9d8;
+}
+
+.table-reset:disabled {
+    opacity: 0.65;
+    cursor: wait;
+}
+
+.table-reset:focus-visible {
     outline: 3px solid #212529;
     outline-offset: 2px;
 }
@@ -508,7 +536,7 @@
     height: 260px;
 }
 
-/* ---------- Top 5 และสวิตช์ของหมด ---------- */
+/* ---------- เมนูยอดนิยมและสวิตช์ของหมด ---------- */
 .stock-list {
     list-style: none;
 }

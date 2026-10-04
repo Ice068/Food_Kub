@@ -72,6 +72,7 @@ class PaymentRouter:
             self.show_checkout,
             methods=["GET"],
         )
+
         self.router.add_api_route(
             "/pay",
             self.process_payment,
@@ -101,8 +102,10 @@ class PaymentRouter:
             "payment_result.html",
             context,
         )
+
         response.status_code = status
         response.headers["Cache-Control"] = "no-store"
+
         return response
 
     def _error(self, request, message, status=400):
@@ -131,6 +134,8 @@ class PaymentRouter:
         ).encode()
 
         return hashlib.sha256(encoded).hexdigest()
+
+    # ---------- หน้าชำระเงิน ----------
 
     async def show_checkout(self, request: Request):
         owner, scope = self._scope(request)
@@ -215,6 +220,8 @@ class PaymentRouter:
         )
 
         return response
+
+    # ---------- ดำเนินการชำระเงิน ----------
 
     async def process_payment(
         self,
@@ -440,6 +447,7 @@ class PaymentRouter:
                     "กรุณาติดต่อพนักงานก่อนจ่ายซ้ำ"
                 )
                 self._pending[scope] = context
+
                 return self._render(request, context, 503)
 
             if not isinstance(result, dict):
@@ -448,6 +456,7 @@ class PaymentRouter:
                     "กรุณาติดต่อพนักงานก่อนจ่ายซ้ำ"
                 )
                 self._pending[scope] = context
+
                 return self._render(request, context, 502)
 
             context["result"] = result
@@ -466,11 +475,13 @@ class PaymentRouter:
                     "กรุณาติดต่อพนักงาน"
                 )
                 self._pending[scope] = context
+
                 return self._render(request, context, 502)
 
             # pending ยังไม่ใช่หลักฐานว่าชำระสำเร็จ
             if result.get("status") == "pending":
                 self._pending[scope] = context
+
                 return self._render(request, context)
 
             payment_id = result.get("payment_id")
@@ -485,6 +496,7 @@ class PaymentRouter:
                     "กรุณาติดต่อพนักงาน"
                 )
                 self._pending[scope] = context
+
                 return self._render(request, context, 502)
 
             # ตรวจว่ามีคนเพิ่มอาหารระหว่างรอ Backend หรือไม่
@@ -524,6 +536,7 @@ class PaymentRouter:
                     "กรุณาให้พนักงานตรวจสอบ ห้ามจ่ายซ้ำ"
                 )
                 self._pending[scope] = context
+
                 return self._render(request, context, 409)
 
             # หักรายการเฉพาะเมื่อ Backend ยืนยันสำเร็จ
@@ -536,6 +549,7 @@ class PaymentRouter:
                         float(shared),
                         sorted(server_shared_ids),
                     )
+
                     self.cart_service.settle_fully_paid_shared_items(
                         request,
                         items,
@@ -550,6 +564,7 @@ class PaymentRouter:
             else:
                 remaining = Decimal(0)
                 closed = True
+
                 self.cart_service.clear_all(request)
 
             context.update({
@@ -570,24 +585,31 @@ class PaymentRouter:
                     closed,
                 )
 
-                live = (
-                    []
-                    if closed
-                    else await build_lines(
-                        self.menu_service,
-                        dict(
-                            self.cart_service.get_active_orders(request)
-                        ),
-                    )
-                )
+                synced = True
 
-                synced = (
-                    await self.stats_service.sync_live_order(
-                        table, live, status="waiting_payment",
-                    )
-                    if table is not None
-                    else True
-                )
+                if table is not None:
+                    if closed:
+                        # ใช้รายการอาหารจริงก่อนหักบิล รวมรายการของกลาง
+                        # pay_items อาจมีรหัสพิเศษ 9999 จึงไม่ใช้ตรวจโต๊ะ
+                        # เก็บโต๊ะไว้จนพนักงานกด Reset หลังลูกค้าลุกออก
+                        synced = await self.stats_service.mark_table_paid(
+                            table,
+                            items,
+                        )
+
+                    else:
+                        live = await build_lines(
+                            self.menu_service,
+                            dict(
+                                self.cart_service.get_active_orders(request)
+                            ),
+                        )
+
+                        synced = await self.stats_service.sync_live_order(
+                            table,
+                            live,
+                            status="waiting_payment",
+                        )
 
                 if not written or not synced:
                     logger.error(
@@ -601,6 +623,8 @@ class PaymentRouter:
                 )
 
             return self._render(request, context)
+
+    # ---------- ตรวจรายการจ่ายแยก ----------
 
     @staticmethod
     def _parse_selection(selected_text, shared_text):
@@ -641,6 +665,8 @@ class PaymentRouter:
             raise ValueError("รายการของกลางไม่ถูกต้อง")
 
         return selected, ids
+
+    # ---------- สร้างบิลจากข้อมูลฝั่งเซิร์ฟเวอร์ ----------
 
     async def _bill(self, request):
         quantities = dict(self.cart_service.get_bill_items(request))
@@ -715,4 +741,5 @@ class PaymentRouter:
         )
 
         total = money(gross - paid)
+
         return items, total, shared_ids, paid
