@@ -1,6 +1,8 @@
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 
+from google.cloud.firestore import transactional
+
 from app.core.config import settings
 from app.core.db import db
 
@@ -75,11 +77,14 @@ class StatsService:
         items: list[dict],
         status: str | None = None,
     ) -> None:
-        """อัปเดตบิลและสถานะโต๊ะ
+        """อัปเดตบิล สถานะโต๊ะ และรักษาสถานะอาหาร
 
         dining = กำลังรับประทาน
         waiting_payment = รอชำระ
         items ว่าง = โต๊ะว่าง ตามพฤติกรรมเดิม
+
+        เมนูใหม่หรือจำนวนเพิ่ม เริ่มที่ cooking
+        จำนวนเท่าเดิมหรือลดลง รักษาสถานะอาหารเดิม
         """
         if status not in (None, "dining", "waiting_payment"):
             raise ValueError("Invalid table status")
@@ -91,27 +96,112 @@ class StatsService:
             if int(i.get("qty", 0)) > 0
         ]
 
-        if not clean:
-            ref.delete()
-            return
+        @transactional
+        def save(transaction):
+            existing = ref.get(transaction=transaction)
+            previous = (
+                (existing.to_dict() or {})
+                if existing.exists
+                else {}
+            )
 
-        existing = ref.get()
-        previous = (
-            (existing.to_dict() or {})
-            if existing.exists
-            else {}
-        )
+            if not clean:
+                transaction.delete(ref)
+                return
 
-        opened_at = previous.get("opened_at")
-        now = _now().isoformat()
+            previous_items = {
+                i["id"]: i
+                for i in previous.get("items", [])
+            }
 
-        ref.set({
-            "table": table,
-            "items": clean,
-            "status": status or previous.get("status", "dining"),
-            "opened_at": opened_at or now,
-            "updated_at": now,
-        })
+            merged = []
+
+            for item in clean:
+                old = previous_items.get(item["id"])
+                kitchen_status = "cooking"
+
+                if old and item["qty"] <= old["qty"]:
+                    kitchen_status = old.get(
+                        "kitchen_status",
+                        "cooking",
+                    )
+
+                merged.append({
+                    **item,
+                    "kitchen_status": kitchen_status,
+                })
+
+            now = _now().isoformat()
+
+            transaction.set(ref, {
+                "table": table,
+                "items": merged,
+                "status": status or previous.get("status", "dining"),
+                "opened_at": previous.get("opened_at") or now,
+                "updated_at": now,
+            })
+
+        save(self.db.transaction())
+
+    def set_kitchen_status(
+        self,
+        table: int,
+        item_id: int,
+        status: str,
+        expected_qty: int,
+        opened_at: str,
+    ) -> dict | None:
+        """เปลี่ยนสถานะอาหารทั้งแถวเมนู
+
+        cooking = กำลังทำ
+        ready = พร้อมเสิร์ฟ
+        served = เสิร์ฟแล้ว
+
+        ตรวจว่าบิลและจำนวนยังตรงกับหน้าที่พนักงานเปิดอยู่
+        """
+        if status not in ("cooking", "ready", "served"):
+            raise ValueError("Invalid kitchen status")
+
+        ref = self.db.collection(self.live_orders).document(str(table))
+
+        @transactional
+        def update(transaction):
+            snapshot = ref.get(transaction=transaction)
+
+            if not snapshot.exists:
+                return None
+
+            data = snapshot.to_dict() or {}
+
+            if data.get("opened_at") != opened_at:
+                raise ValueError("Table bill has changed")
+
+            items = [
+                dict(item)
+                for item in data.get("items", [])
+            ]
+
+            item = next(
+                (i for i in items if i["id"] == item_id),
+                None,
+            )
+
+            if item is None:
+                return None
+
+            if item["qty"] != expected_qty:
+                raise ValueError("Order quantity has changed")
+
+            item["kitchen_status"] = status
+
+            transaction.update(ref, {
+                "items": items,
+                "updated_at": _now().isoformat(),
+            })
+
+            return item
+
+        return update(self.db.transaction())
 
     @staticmethod
     def _clean_item(item: dict) -> dict:
@@ -128,6 +218,7 @@ class StatsService:
         now = _now()
         today = _day(now)
         yesterday = _day(now - timedelta(days=1))
+
         day_keys = [
             _day(now - timedelta(days=n))
             for n in range(days - 1, -1, -1)
@@ -145,6 +236,7 @@ class StatsService:
             sum(t["amount"] for t in yesterday_tx),
             2,
         )
+
         bills_today = sum(
             1 for t in today_tx if t.get("bill_closed")
         )
@@ -215,6 +307,7 @@ class StatsService:
         )
 
         grouped: dict[str, list[dict]] = defaultdict(list)
+
         for doc in docs:
             data = doc.to_dict()
             data["id"] = doc.id
@@ -222,7 +315,11 @@ class StatsService:
 
         return grouped
 
-    def _top_dishes(self, day: str, limit: int) -> list[dict]:
+    def _top_dishes(
+        self,
+        day: str,
+        limit: int,
+    ) -> list[dict]:
         docs = (
             self.db.collection(self.order_events)
             .where("date", "==", day)
@@ -230,6 +327,7 @@ class StatsService:
         )
 
         counts: dict[int, dict] = {}
+
         for doc in docs:
             for item in doc.to_dict().get("items", []):
                 if item["id"] == SHARED_PSEUDO_ID:
@@ -249,6 +347,7 @@ class StatsService:
             counts.values(),
             key=lambda r: (-r["qty"], r["id"]),
         )
+
         return ranked[:limit]
 
     def _live_tables(self) -> list[dict]:
@@ -256,14 +355,23 @@ class StatsService:
 
         for doc in self.db.collection(self.live_orders).stream():
             data = doc.to_dict()
-            items = data.get("items", [])
+
+            items = [
+                {
+                    **item,
+                    "kitchen_status": item.get(
+                        "kitchen_status",
+                        "cooking",
+                    ),
+                }
+                for item in data.get("items", [])
+            ]
 
             if not items:
                 continue
 
             tables.append({
                 "table": data.get("table"),
-                # ข้อมูลเดิมที่ไม่มี status ถือว่ากำลังรับประทาน
                 "status": data.get("status", "dining"),
                 "items": items,
                 "total": round(
@@ -280,11 +388,13 @@ class StatsService:
                 t["table"],
             )
         )
+
         return tables
 
     @staticmethod
     def _sales_by_hour(today_tx: list[dict]) -> list[dict]:
         totals = [0.0] * 24
+
         for t in today_tx:
             hour = (
                 datetime.fromisoformat(t["created_at"])
@@ -319,4 +429,5 @@ class StatsService:
     ) -> float | None:
         if not yesterday:
             return None
+
         return round((today - yesterday) / yesterday * 100, 1)

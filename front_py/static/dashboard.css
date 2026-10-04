@@ -41,8 +41,11 @@
     background: rgba(255, 255, 255, 0.3);
 }
 
-.dash-nav .spacer { flex: 1; }
+.dash-nav .spacer {
+    flex: 1;
+}
 
+/* ---------- หัวแดชบอร์ด ---------- */
 .dash-head {
     display: flex;
     flex-wrap: wrap;
@@ -52,8 +55,14 @@
     margin: 8px 0 18px;
 }
 
-.dash-head h1 { font-size: 1.5rem; }
-.live-status { color: #5c5f66; font-size: 0.9rem; }
+.dash-head h1 {
+    font-size: 1.5rem;
+}
+
+.live-status {
+    color: #5c5f66;
+    font-size: 0.9rem;
+}
 
 .live-dot {
     display: inline-block;
@@ -71,7 +80,9 @@
 }
 
 @keyframes pulse {
-    50% { opacity: 0.35; }
+    50% {
+        opacity: 0.35;
+    }
 }
 
 .dash-error {
@@ -121,9 +132,20 @@
     color: #5c5f66;
 }
 
-.metric-card .sub { font-size: 0.85rem; color: #5c5f66; }
-.trend-up { color: #2b8a3e; font-weight: 600; }
-.trend-down { color: #c92a2a; font-weight: 600; }
+.metric-card .sub {
+    font-size: 0.85rem;
+    color: #5c5f66;
+}
+
+.trend-up {
+    color: #2b8a3e;
+    font-weight: 600;
+}
+
+.trend-down {
+    color: #c92a2a;
+    font-weight: 600;
+}
 
 .progress {
     height: 8px;
@@ -157,9 +179,22 @@
     min-width: 0;
 }
 
-.panel h2 { font-size: 1.1rem; margin-bottom: 4px; }
-.panel .panel-sub { color: #5c5f66; font-size: 0.85rem; margin-bottom: 14px; }
-.empty { color: #868e96; padding: 18px 0; text-align: center; }
+.panel h2 {
+    font-size: 1.1rem;
+    margin-bottom: 4px;
+}
+
+.panel .panel-sub {
+    color: #5c5f66;
+    font-size: 0.85rem;
+    margin-bottom: 14px;
+}
+
+.empty {
+    color: #868e96;
+    padding: 18px 0;
+    text-align: center;
+}
 
 /* ---------- โต๊ะและออเดอร์สด ---------- */
 .table-grid {
@@ -193,22 +228,61 @@
     color: #495057;
 }
 
-/* ว่าง */
-.table-tile.is-free { background: #ebfbee; border-color: #8ce99a; }
-.table-tile.is-free .t-state { background: #d3f9d8; color: #2b8a3e; }
+/* โต๊ะว่าง */
+.table-tile.is-free {
+    background: #ebfbee;
+    border-color: #8ce99a;
+}
+
+.table-tile.is-free .t-state {
+    background: #d3f9d8;
+    color: #2b8a3e;
+}
 
 /* กำลังรับประทาน */
-.table-tile.is-dining { background: #fff9db; border-color: #ffd43b; }
-.table-tile.is-dining .t-state { background: #ffec99; color: #674d00; }
+.table-tile.is-dining {
+    background: #fff9db;
+    border-color: #ffd43b;
+}
 
-/* รอชำระ */
-.table-tile.is-waiting { background: #fff5f5; border-color: #ffa8a8; }
-.table-tile.is-waiting .t-state { background: #ffe3e3; color: #c92a2a; }
+.table-tile.is-dining .t-state {
+    background: #ffec99;
+    color: #674d00;
+}
 
-.table-tile .t-total { font-weight: 700; color: #d9480f; margin: 6px 0 4px; }
-.table-tile ul { list-style: none; font-size: 0.8rem; color: #495057; }
-.table-tile li { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.table-tile .t-free { color: #868e96; font-size: 0.85rem; margin-top: 6px; }
+/* รอชำระเงิน */
+.table-tile.is-waiting {
+    background: #fff5f5;
+    border-color: #ffa8a8;
+}
+
+.table-tile.is-waiting .t-state {
+    background: #ffe3e3;
+    color: #c92a2a;
+}
+
+.table-tile .t-total {
+    font-weight: 700;
+    color: #d9480f;
+    margin: 6px 0 4px;
+}
+
+.table-tile ul {
+    list-style: none;
+    font-size: 0.8rem;
+    color: #495057;
+}
+
+.table-tile li {
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.table-tile .t-free {
+    color: #868e96;
+    font-size: 0.85rem;
+    margin-top: 6px;
+}
 
 /* ---------- ปุ่มดูออเดอร์ทั้งหมด ---------- */
 .table-open {
@@ -224,7 +298,9 @@
     font-size: 0.8rem;
 }
 
-.table-open:hover { background: #f1f3f5; }
+.table-open:hover {
+    background: #f1f3f5;
+}
 
 .table-open:focus-visible,
 .table-dialog-close:focus-visible {
@@ -256,7 +332,9 @@
     gap: 12px;
 }
 
-.table-dialog-head h2 { font-size: 1.1rem; }
+.table-dialog-head h2 {
+    font-size: 1.1rem;
+}
 
 .table-dialog-close {
     padding: 8px 14px;
@@ -268,7 +346,10 @@
     cursor: pointer;
 }
 
-.table-dialog-status { margin: 12px 0; font-size: 0.9rem; }
+.table-dialog-status {
+    margin: 12px 0;
+    font-size: 0.9rem;
+}
 
 .table-order-scroll {
     max-height: 55dvh;
@@ -288,9 +369,19 @@
     border-bottom: 1px solid #e9ecef;
 }
 
-.table-order-list th { background: #f8f9fa; }
-.table-order-list td:first-child { min-width: 110px; overflow-wrap: anywhere; }
-.table-order-list .num { text-align: right; white-space: nowrap; }
+.table-order-list th {
+    background: #f8f9fa;
+}
+
+.table-order-list td:first-child {
+    min-width: 110px;
+    overflow-wrap: anywhere;
+}
+
+.table-order-list .num {
+    text-align: right;
+    white-space: nowrap;
+}
 
 .table-dialog-total {
     display: flex;
@@ -300,9 +391,81 @@
     font-size: 1rem;
 }
 
+/* ---------- สถานะอาหารในครัว ---------- */
+.kitchen-badge {
+    display: inline-block;
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 99px;
+    margin: 2px 0;
+}
+
+.kitchen-select {
+    min-width: 112px;
+    padding: 7px 8px;
+    border: 1px solid #ced4da;
+    border-radius: 8px;
+    font: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+/* กำลังทำ */
+.kitchen-badge.is-cooking,
+.kitchen-select.is-cooking {
+    background: #fff3bf;
+    color: #674d00;
+}
+
+/* พร้อมเสิร์ฟ */
+.kitchen-badge.is-ready,
+.kitchen-select.is-ready {
+    background: #d0ebff;
+    color: #1864ab;
+}
+
+/* เสิร์ฟแล้ว */
+.kitchen-badge.is-served,
+.kitchen-select.is-served {
+    background: #d3f9d8;
+    color: #2b8a3e;
+}
+
+.kitchen-select:disabled {
+    opacity: 0.65;
+    cursor: wait;
+}
+
+.kitchen-select:focus-visible {
+    outline: 3px solid #212529;
+    outline-offset: 2px;
+}
+
+.kitchen-note {
+    margin: 8px 0 12px;
+    color: #5c5f66;
+    font-size: 0.8rem;
+}
+
+.kitchen-error {
+    background: #fff5f5;
+    color: #a61e1e;
+    border: 1px solid #ffc9c9;
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 12px;
+}
+
 /* ---------- ตารางรายการเงินเข้า ---------- */
-.tx-wrap { overflow-x: auto; }
-.tx-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.tx-wrap {
+    overflow-x: auto;
+}
+
+.tx-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
 
 .tx-table th,
 .tx-table td {
@@ -312,18 +475,43 @@
     white-space: nowrap;
 }
 
-.tx-table th { color: #5c5f66; font-weight: 600; font-size: 0.8rem; }
-.tx-table td.num, .tx-table th.num { text-align: right; }
+.tx-table th {
+    color: #5c5f66;
+    font-weight: 600;
+    font-size: 0.8rem;
+}
 
-.badge { font-size: 0.75rem; padding: 2px 8px; border-radius: 99px; }
-.badge.closed { background: #d3f9d8; color: #2b8a3e; }
-.badge.partial { background: #fff3bf; color: #a05c00; }
+.tx-table td.num,
+.tx-table th.num {
+    text-align: right;
+}
+
+.badge {
+    font-size: 0.75rem;
+    padding: 2px 8px;
+    border-radius: 99px;
+}
+
+.badge.closed {
+    background: #d3f9d8;
+    color: #2b8a3e;
+}
+
+.badge.partial {
+    background: #fff3bf;
+    color: #a05c00;
+}
 
 /* ---------- กราฟ ---------- */
-.chart-box { position: relative; height: 260px; }
+.chart-box {
+    position: relative;
+    height: 260px;
+}
 
 /* ---------- Top 5 และสวิตช์ของหมด ---------- */
-.stock-list { list-style: none; }
+.stock-list {
+    list-style: none;
+}
 
 .stock-row {
     display: grid;
@@ -334,7 +522,9 @@
     border-bottom: 1px solid #f1f3f5;
 }
 
-.stock-row:last-child { border-bottom: none; }
+.stock-row:last-child {
+    border-bottom: none;
+}
 
 .rank {
     width: 28px;
@@ -349,8 +539,15 @@
     font-size: 0.85rem;
 }
 
-.stock-name { font-weight: 600; overflow-wrap: anywhere; }
-.stock-meta { font-size: 0.8rem; color: #5c5f66; }
+.stock-name {
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.stock-meta {
+    font-size: 0.8rem;
+    color: #5c5f66;
+}
 
 .stock-bar {
     height: 6px;
@@ -360,8 +557,16 @@
     overflow: hidden;
 }
 
-.stock-bar > span { display: block; height: 100%; background: #ffa94d; }
-.stock-row.is-off .stock-name { color: #868e96; text-decoration: line-through; }
+.stock-bar > span {
+    display: block;
+    height: 100%;
+    background: #ffa94d;
+}
+
+.stock-row.is-off .stock-name {
+    color: #868e96;
+    text-decoration: line-through;
+}
 
 .switch {
     display: inline-flex;
@@ -372,7 +577,12 @@
     user-select: none;
 }
 
-.switch input { position: absolute; opacity: 0; width: 0; height: 0; }
+.switch input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
 
 .switch .track {
     width: 42px;
@@ -396,12 +606,26 @@
     transition: transform 0.2s;
 }
 
-.switch input:checked + .track { background: #2b8a3e; }
-.switch input:checked + .track::after { transform: translateX(18px); }
-.switch input:focus-visible + .track { outline: 3px solid #212529; outline-offset: 2px; }
-.switch .s-text { min-width: 52px; }
+.switch input:checked + .track {
+    background: #2b8a3e;
+}
 
-details.all-menu { margin-top: 14px; }
+.switch input:checked + .track::after {
+    transform: translateX(18px);
+}
+
+.switch input:focus-visible + .track {
+    outline: 3px solid #212529;
+    outline-offset: 2px;
+}
+
+.switch .s-text {
+    min-width: 52px;
+}
+
+details.all-menu {
+    margin-top: 14px;
+}
 
 details.all-menu summary {
     cursor: pointer;
@@ -410,11 +634,21 @@ details.all-menu summary {
     padding: 6px 0;
 }
 
-.all-menu .stock-row { grid-template-columns: 1fr auto; }
+.all-menu .stock-row {
+    grid-template-columns: 1fr auto;
+}
 
 /* ---------- หน้าจอมือถือ ---------- */
 @media (max-width: 600px) {
-    .dash { padding: 14px 12px 40px; }
-    .dash-grid { grid-template-columns: 1fr; }
-    .metric-card .value { font-size: 1.7rem; }
+    .dash {
+        padding: 14px 12px 40px;
+    }
+
+    .dash-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .metric-card .value {
+        font-size: 1.7rem;
+    }
 }

@@ -10,7 +10,6 @@
 </head>
 <body>
 
-<!-- แถบเมนูลัด -->
 <nav class="dash-nav" aria-label="เมนูลัด">
     <a class="brand" href="/admin/dashboard">🍽️ Food Kub Admin</a>
     <a class="nav-link is-current" href="/admin/dashboard" aria-current="page">📊 แดชบอร์ด</a>
@@ -35,7 +34,7 @@
 
     <div id="dash-error" class="dash-error" role="alert" hidden></div>
 
-    <!-- 1) สถิติภาพรวมรายวัน -->
+    <!-- สถิติภาพรวมรายวัน -->
     <section class="metric-grid" aria-label="สถิติภาพรวมรายวัน">
         <article class="metric-card">
             <div class="label">💰 ยอดขายรวมวันนี้</div>
@@ -65,7 +64,7 @@
         </article>
     </section>
 
-    <!-- 2) มอนิเตอร์โต๊ะและประวัติการชำระเงิน -->
+    <!-- มอนิเตอร์โต๊ะและประวัติการชำระเงิน -->
     <div class="dash-grid">
         <section class="panel" aria-labelledby="h-live">
             <h2 id="h-live">มอนิเตอร์โต๊ะ &amp; ออเดอร์สด</h2>
@@ -93,7 +92,7 @@
         </section>
     </div>
 
-    <!-- 3) กราฟแนวโน้มยอดขาย -->
+    <!-- กราฟแนวโน้มยอดขาย -->
     <div class="dash-grid">
         <section class="panel" aria-labelledby="h-trend">
             <h2 id="h-trend">ยอดขาย 7 วันล่าสุด</h2>
@@ -112,7 +111,7 @@
         </section>
     </div>
 
-    <!-- 4) เมนูยอดนิยมและเปิด-ปิดของหมด -->
+    <!-- เมนูยอดนิยมและเปิด-ปิดของหมด -->
     <section class="panel" aria-labelledby="h-stock">
         <h2 id="h-stock">เมนูยอดนิยม &amp; เปิด-ปิดของหมด</h2>
         <p class="panel-sub">
@@ -129,18 +128,18 @@
     </section>
 </main>
 
-<!-- หน้าต่างรายละเอียดออเดอร์ของโต๊ะ -->
+<!-- รายละเอียดออเดอร์และสถานะอาหาร -->
 <dialog id="table-dialog" class="table-dialog" aria-labelledby="table-dialog-title">
     <div class="table-dialog-head">
         <h2 id="table-dialog-title">ออเดอร์ทั้งหมด</h2>
         <form method="dialog">
-            <button type="submit" class="table-dialog-close" autofocus>
-                ปิด
-            </button>
+            <button type="submit" class="table-dialog-close" autofocus>ปิด</button>
         </form>
     </div>
 
     <p id="table-dialog-status" class="table-dialog-status"></p>
+    <p class="kitchen-note">สถานะอาหารใช้กับจำนวนทั้งหมดในแต่ละแถวเมนู</p>
+    <p id="kitchen-error" class="kitchen-error" role="alert" hidden></p>
 
     <div class="table-order-scroll">
         <table class="table-order-list">
@@ -150,6 +149,7 @@
                     <th scope="col" class="num">จำนวน</th>
                     <th scope="col" class="num">ราคา/จาน</th>
                     <th scope="col" class="num">รวม</th>
+                    <th scope="col">สถานะอาหาร</th>
                 </tr>
             </thead>
             <tbody id="table-dialog-items"></tbody>
@@ -187,11 +187,22 @@
         qr_bank: "QR พร้อมเพย์"
     };
 
+    const KITCHEN_STATES = {
+        cooking: "กำลังทำ",
+        ready: "พร้อมเสิร์ฟ",
+        served: "เสิร์ฟแล้ว"
+    };
+
+    const kitchenState = (item) =>
+        Object.hasOwn(KITCHEN_STATES, item.kitchen_status)
+            ? item.kitchen_status
+            : "cooking";
+
+    let pendingKitchen = 0;
     let liveTables = new Map();
     let selectedTable = null;
     let pendingToggles = 0;
 
-    // กันวาด DOM ซ้ำถ้าข้อมูลไม่เปลี่ยน
     const lastHTML = {};
 
     function setHTML(id, html) {
@@ -205,9 +216,7 @@
             return prevText + " (เมื่อวานยังไม่มียอดให้เทียบ)";
         }
 
-        if (pct === 0) {
-            return "เท่ากับเมื่อวาน · " + prevText;
-        }
+        if (pct === 0) return "เท่ากับเมื่อวาน · " + prevText;
 
         const cls = pct > 0 ? "trend-up" : "trend-down";
         const arrow = pct > 0 ? "▲" : "▼";
@@ -282,9 +291,18 @@
             const stateClass = waiting ? "is-waiting" : "is-dining";
             const stateLabel = waiting ? "รอชำระ" : "กำลังรับประทาน";
 
-            const shown = t.items.slice(0, 4)
-                .map((i) => `<li>${esc(i.name)} ×${i.qty}</li>`)
-                .join("");
+            const shown = t.items.slice(0, 4).map((item) => {
+                const state = kitchenState(item);
+
+                return `
+                    <li>
+                        ${esc(item.name)} ×${item.qty}
+                        <span class="kitchen-badge is-${state}">
+                            ${KITCHEN_STATES[state]}
+                        </span>
+                    </li>
+                `;
+            }).join("");
 
             const more = t.items.length > 4
                 ? `<li>+${t.items.length - 4} รายการ</li>`
@@ -317,12 +335,16 @@
 
         setHTML("table-grid", tiles.join(""));
 
-        if ($("table-dialog").open && selectedTable !== null) {
+        if (
+            $("table-dialog").open &&
+            selectedTable !== null &&
+            !pendingKitchen
+        ) {
             renderTableDetails();
         }
     }
 
-    // ---------- รายละเอียดออเดอร์ทั้งหมด ----------
+    // ---------- รายละเอียดออเดอร์ ----------
     function renderTableDetails() {
         const table = liveTables.get(selectedTable);
         const items = table ? table.items : [];
@@ -336,23 +358,53 @@
                 ? "🔴 รอชำระ"
                 : "🟡 กำลังรับประทาน";
 
-        setHTML("table-dialog-items", items.length
-            ? items.map((item) => `
-                <tr>
-                    <td>${esc(item.name)}</td>
-                    <td class="num">${item.qty}</td>
-                    <td class="num">${money(item.price)}</td>
-                    <td class="num">${money(item.price * item.qty)}</td>
-                </tr>
-            `).join("")
+        const rows = items.length
+            ? items.map((item) => {
+                const state = kitchenState(item);
+
+                const options = Object.entries(KITCHEN_STATES)
+                    .map(([value, label]) => `
+                        <option
+                            value="${value}"
+                            ${value === state ? "selected" : ""}
+                        >
+                            ${label}
+                        </option>
+                    `)
+                    .join("");
+
+                return `
+                    <tr>
+                        <td>${esc(item.name)}</td>
+                        <td class="num">${item.qty}</td>
+                        <td class="num">${money(item.price)}</td>
+                        <td class="num">${money(item.price * item.qty)}</td>
+                        <td>
+                            <select
+                                class="kitchen-select is-${state}"
+                                data-table="${selectedTable}"
+                                data-item="${item.id}"
+                                data-qty="${item.qty}"
+                                data-opened="${esc(table.opened_at || "")}"
+                                data-current="${state}"
+                                aria-label="สถานะอาหาร ${esc(item.name)}"
+                                ${!table.opened_at || pendingKitchen ? "disabled" : ""}
+                            >
+                                ${options}
+                            </select>
+                        </td>
+                    </tr>
+                `;
+            }).join("")
             : `
                 <tr>
-                    <td colspan="4" class="empty">
+                    <td colspan="5" class="empty">
                         ไม่มีออเดอร์ที่เปิดอยู่สำหรับโต๊ะนี้
                     </td>
                 </tr>
-            `
-        );
+            `;
+
+        setHTML("table-dialog-items", rows);
 
         $("table-dialog-total").textContent =
             money(table ? table.total : 0);
@@ -364,16 +416,100 @@
         if (!button) return;
 
         selectedTable = Number(button.dataset.table);
+        $("kitchen-error").hidden = true;
 
         renderTableDetails();
         $("table-dialog").showModal();
+    });
+
+    // ---------- บันทึกสถานะอาหาร ----------
+    $("table-dialog-items").addEventListener("change", async (event) => {
+        const input = event.target;
+
+        if (!input.matches("select.kitchen-select")) return;
+
+        const tableNumber = Number(input.dataset.table);
+        const itemId = Number(input.dataset.item);
+        const wanted = input.value;
+
+        pendingKitchen++;
+
+        $("table-dialog-items")
+            .querySelectorAll("select.kitchen-select")
+            .forEach((select) => {
+                select.disabled = true;
+            });
+
+        $("kitchen-error").hidden = true;
+
+        try {
+            const resp = await fetch(
+                `/admin/dashboard/tables/${tableNumber}/items/${itemId}/kitchen-status`,
+                {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        status: wanted,
+                        expected_qty: Number(input.dataset.qty),
+                        opened_at: input.dataset.opened
+                    }),
+                }
+            );
+
+            if (resp.status === 401) {
+                location.href = "/admin/login";
+                return;
+            }
+
+            const result = await resp.json();
+
+            if (!resp.ok) {
+                throw new Error(
+                    result.error || "บันทึกสถานะอาหารไม่สำเร็จ"
+                );
+            }
+
+            const table = liveTables.get(tableNumber);
+            const item = table &&
+                table.items.find((item) => item.id === itemId);
+
+            if (
+                item &&
+                table.opened_at === input.dataset.opened &&
+                item.qty === Number(input.dataset.qty)
+            ) {
+                item.kitchen_status = wanted;
+            }
+        } catch (err) {
+            input.value = input.dataset.current;
+
+            if (selectedTable === tableNumber) {
+                $("kitchen-error").textContent =
+                    err.message || "บันทึกสถานะอาหารไม่สำเร็จ";
+                $("kitchen-error").hidden = false;
+            }
+        } finally {
+            pendingKitchen--;
+
+            $("table-dialog-items")
+                .querySelectorAll("select.kitchen-select")
+                .forEach((select) => {
+                    select.disabled =
+                        Boolean(pendingKitchen) || !select.dataset.opened;
+                });
+
+            if ($("table-dialog").open) {
+                renderTableDetails();
+            }
+
+            await refresh();
+        }
     });
 
     $("table-dialog").addEventListener("close", () => {
         const tableNumber = selectedTable;
         selectedTable = null;
 
-        // คืนโฟกัสให้ปุ่มของโต๊ะ แม้การ์ดถูกวาดใหม่ระหว่างรีเฟรช
         const button = $("table-grid").querySelector(
             `button.table-open[data-table="${tableNumber}"]`
         );
@@ -435,11 +571,12 @@
             type: "bar",
             data: {
                 labels: days.map((x) =>
-                    new Date(x.date + "T00:00:00").toLocaleDateString("th-TH", {
-                        weekday: "short",
-                        day: "numeric",
-                        month: "short"
-                    })
+                    new Date(x.date + "T00:00:00")
+                        .toLocaleDateString("th-TH", {
+                            weekday: "short",
+                            day: "numeric",
+                            month: "short"
+                        })
                 ),
                 datasets: [{
                     label: "ยอดขาย (บาท)",
@@ -476,7 +613,9 @@
 
         const from = Math.min(8, ...withSales);
         const to = Math.max(21, ...withSales);
-        const slice = hours.filter((h) => h.hour >= from && h.hour <= to);
+        const slice = hours.filter((h) =>
+            h.hour >= from && h.hour <= to
+        );
 
         upsertChart("hour", "chart-hour", {
             type: "line",
@@ -514,7 +653,7 @@
         });
     }
 
-    // ---------- Top 5 และสวิตช์ของหมด ----------
+    // ---------- เมนูยอดนิยมและสวิตช์ของหมด ----------
     function switchHTML(id, available) {
         return `
             <label class="switch">
@@ -536,7 +675,11 @@
         const avail = new Map(
             d.menu.map((m) => [m.id, m.available])
         );
-        const max = Math.max(1, ...d.top_dishes.map((x) => x.qty));
+
+        const max = Math.max(
+            1,
+            ...d.top_dishes.map((x) => x.qty)
+        );
 
         setHTML("top-list", d.top_dishes.length
             ? d.top_dishes.map((x, i) => {

@@ -1,9 +1,10 @@
 from datetime import datetime, timedelta, timezone
+from typing import Literal
 
 import httpx
 from fastapi import APIRouter, Cookie, Query, Request
 from fastapi.responses import JSONResponse, RedirectResponse
-from pydantic import BaseModel, StrictBool
+from pydantic import BaseModel, Field, StrictBool
 
 from app.services.menu_service import MenuService
 from app.services.stats_service import StatsService
@@ -63,6 +64,12 @@ class AvailabilityPayload(BaseModel):
     available: StrictBool
 
 
+class KitchenStatusPayload(BaseModel):
+    status: Literal["cooking", "ready", "served"]
+    expected_qty: int = Field(..., gt=0)
+    opened_at: str = Field(..., min_length=1)
+
+
 class DashboardRouter:
     """หน้า Dashboard และ JSON API สำหรับรีเฟรชด้วย JavaScript"""
 
@@ -103,6 +110,12 @@ class DashboardRouter:
             "/availability/{item_id}",
             self.set_availability,
             methods=["POST"],
+        )
+
+        self.router.add_api_route(
+            "/tables/{table}/items/{item_id}/kitchen-status",
+            self.set_kitchen_status,
+            methods=["PUT"],
         )
 
     @staticmethod
@@ -187,11 +200,7 @@ class DashboardRouter:
                     "name": item.name,
                     "category": item.category,
                     "price": item.price,
-                    "available": getattr(
-                        item,
-                        "available",
-                        True,
-                    ),
+                    "available": getattr(item, "available", True),
                 }
                 for item in menu
             ]
@@ -209,7 +218,7 @@ class DashboardRouter:
                 503,
             )
 
-    # ---------- เปิด/ปิดขายเมนู รับ JSON ----------
+    # ---------- เปิด/ปิดขายเมนู ----------
 
     async def set_availability(
         self,
@@ -244,6 +253,66 @@ class DashboardRouter:
         except httpx.HTTPError:
             return self._json(
                 {"error": "บันทึกสถานะเมนูไม่สำเร็จ"},
+                503,
+            )
+
+    # ---------- เปลี่ยนสถานะอาหาร ----------
+
+    async def set_kitchen_status(
+        self,
+        table: int,
+        item_id: int,
+        payload: KitchenStatusPayload,
+        admin_token: str | None = Cookie(None),
+    ):
+        if not self._is_admin(admin_token):
+            return self._json(
+                {"error": "กรุณาเข้าสู่ระบบ Admin"},
+                401,
+            )
+
+        try:
+            result = await self.stats_service.set_kitchen_status(
+                table,
+                item_id,
+                payload.status,
+                payload.expected_qty,
+                payload.opened_at,
+            )
+
+            return self._json(result)
+
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code == 404:
+                return self._json(
+                    {
+                        "error": (
+                            "ไม่พบออเดอร์นี้แล้ว "
+                            "กรุณาโหลดข้อมูลใหม่"
+                        )
+                    },
+                    404,
+                )
+
+            if exc.response.status_code == 409:
+                return self._json(
+                    {
+                        "error": (
+                            "บิลหรือจำนวนอาหารเปลี่ยนแล้ว "
+                            "กรุณาตรวจสอบใหม่"
+                        )
+                    },
+                    409,
+                )
+
+            return self._json(
+                {"error": "บันทึกสถานะอาหารไม่สำเร็จ"},
+                503,
+            )
+
+        except httpx.HTTPError:
+            return self._json(
+                {"error": "ติดต่อ Backend ไม่ได้ กรุณาลองใหม่"},
                 503,
             )
 
@@ -387,6 +456,7 @@ class DashboardRouter:
 
         # กราฟยอดขายรายวัน
         trend = data["sales_trend"]
+
         peak = max(
             (day["total"] for day in trend),
             default=0,

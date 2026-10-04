@@ -40,6 +40,12 @@ class AvailabilityPayload(BaseModel):
     available: bool
 
 
+class KitchenStatusPayload(BaseModel):
+    status: Literal["cooking", "ready", "served"]
+    expected_qty: int = Field(..., gt=0)
+    opened_at: str = Field(..., min_length=1)
+
+
 @router.post("/orders")
 async def record_order(payload: OrderPayload):
     stats_service.record_order(
@@ -71,17 +77,60 @@ async def set_live_order(table: int, payload: LiveOrderPayload):
     return {"status": "success"}
 
 
+@router.put("/live-orders/{table}/items/{item_id}/kitchen-status")
+async def set_kitchen_status(
+    table: int,
+    item_id: int,
+    payload: KitchenStatusPayload,
+):
+    try:
+        item = stats_service.set_kitchen_status(
+            table,
+            item_id,
+            payload.status,
+            payload.expected_qty,
+            payload.opened_at,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail=str(exc),
+        ) from exc
+
+    if item is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Order item not found",
+        )
+
+    return {
+        "status": "success",
+        "item": item,
+    }
+
+
 @router.get("/dashboard")
 async def get_dashboard():
     return stats_service.get_dashboard()
 
 
 @router.post("/availability/{item_id}")
-async def set_availability(item_id: int, payload: AvailabilityPayload):
+async def set_availability(
+    item_id: int,
+    payload: AvailabilityPayload,
+):
     item = menu_service.set_availability(
         item_id,
         payload.available,
     )
+
     if item is None:
-        raise HTTPException(status_code=404, detail="Menu item not found")
-    return {"status": "success", "item": item.to_dict()}
+        raise HTTPException(
+            status_code=404,
+            detail="Menu item not found",
+        )
+
+    return {
+        "status": "success",
+        "item": item.to_dict(),
+    }

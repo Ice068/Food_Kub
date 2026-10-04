@@ -8,14 +8,12 @@ from app.core.config import settings
 class StatsService:
     """ส่งออเดอร์ เงินเข้า และบิลที่เปิดอยู่ไปเก็บที่ Backend
     พร้อมดึงสถิติมาแสดงบนแดชบอร์ด
-
-    หากเขียนข้อมูลไม่สำเร็จ จะคืน False เพื่อให้ลูกค้าใช้งานต่อได้
     """
 
     def __init__(self):
         self.backend_url = settings.BACKEND_URL
 
-    # ---------- เขียนข้อมูล ----------
+    # ---------- เขียนข้อมูลออเดอร์และการชำระเงิน ----------
 
     async def _write(
         self,
@@ -23,6 +21,7 @@ class StatsService:
         path: str,
         payload: dict,
     ) -> bool:
+        """คืน False หากส่งข้อมูลไม่สำเร็จ เพื่อให้ flow ลูกค้าไปต่อได้"""
         try:
             async with httpx.AsyncClient(timeout=5.0) as client:
                 resp = await client.request(
@@ -31,7 +30,9 @@ class StatsService:
                     json=payload,
                 )
                 resp.raise_for_status()
+
             return True
+
         except httpx.HTTPError as exc:
             print(f"[Stats] ส่งข้อมูลสถิติไม่สำเร็จ ({path}): {exc}")
             return False
@@ -100,6 +101,41 @@ class StatsService:
             payload,
         )
 
+    # ---------- เปลี่ยนสถานะอาหาร ----------
+
+    async def set_kitchen_status(
+        self,
+        table: int,
+        item_id: int,
+        status: Literal["cooking", "ready", "served"],
+        expected_qty: int,
+        opened_at: str,
+    ) -> dict:
+        """ส่งสถานะอาหารไปบันทึกที่ Backend
+
+        cooking = กำลังทำ
+        ready = พร้อมเสิร์ฟ
+        served = เสิร์ฟแล้ว
+
+        expected_qty และ opened_at ใช้ตรวจว่าบิลยังตรงกัน
+        หากบันทึกไม่สำเร็จ จะส่ง HTTP error ให้ DashboardRouter จัดการ
+        """
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.put(
+                (
+                    f"{self.backend_url}/api/stats/live-orders/"
+                    f"{table}/items/{item_id}/kitchen-status"
+                ),
+                json={
+                    "status": status,
+                    "expected_qty": expected_qty,
+                    "opened_at": opened_at,
+                },
+            )
+
+            resp.raise_for_status()
+            return resp.json()
+
     # ---------- อ่านข้อมูล ----------
 
     async def get_dashboard(self) -> dict:
@@ -107,8 +143,11 @@ class StatsService:
             resp = await client.get(
                 f"{self.backend_url}/api/stats/dashboard"
             )
+
             resp.raise_for_status()
             return resp.json()
+
+    # ---------- เปิด-ปิดขายเมนู ----------
 
     async def set_availability(
         self,
