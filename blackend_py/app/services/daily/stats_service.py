@@ -59,8 +59,21 @@ class StatsService:
         amount: float,
         items: list[dict],
         bill_closed: bool,
+        payment_type: str | None = None,
     ) -> dict:
-        """บันทึกเงินเข้า โดย bill_closed=True เมื่อจ่ายครบ"""
+        """บันทึกเงินเข้าและรูปแบบการจ่าย
+
+        payment_type:
+            full = บิลรวม
+            split = แยกจ่ายรายคน
+            None = ไม่ระบุรูปแบบ
+
+        bill_closed ระบุว่ารายการนี้ทำให้บิลปิดหรือไม่
+        แยกจาก payment_type เพราะการแยกจ่ายก็ปิดบิลได้
+        """
+        if payment_type not in (None, "full", "split"):
+            raise ValueError("Invalid payment type")
+
         now = _now()
 
         doc = {
@@ -69,6 +82,7 @@ class StatsService:
             "amount": round(float(amount), 2),
             "items": [self._clean_item(i) for i in items],
             "bill_closed": bool(bill_closed),
+            "payment_type": payment_type,
             "created_at": now.isoformat(),
             "date": _day(now),
         }
@@ -480,8 +494,7 @@ class StatsService:
 
             paid = bool(data.get("paid", False))
 
-            # โต๊ะจ่ายครบยังต้องแสดง แม้รายการค้างชำระว่าง
-            # จนกว่าพนักงานจะกด Reset
+            # โต๊ะจ่ายครบยังแสดงจนกว่าพนักงานจะกด Reset
             if not items and not paid:
                 continue
 
@@ -533,6 +546,8 @@ class StatsService:
             "method": t.get("method"),
             "amount": t["amount"],
             "bill_closed": t.get("bill_closed", False),
+            # ข้อมูลเก่าที่ไม่มี field นี้จะคืน None
+            "payment_type": t.get("payment_type"),
             "created_at": t["created_at"],
             "item_count": sum(
                 i["qty"] for i in t.get("items", [])

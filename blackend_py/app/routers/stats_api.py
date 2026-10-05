@@ -33,6 +33,11 @@ class TransactionPayload(BaseModel):
     items: list[Line]
     bill_closed: bool
 
+    # full = บิลรวม
+    # split = แยกจ่ายรายคน
+    # None = ไม่ระบุรูปแบบ รองรับการเรียกแบบเดิม
+    payment_type: Literal["full", "split"] | None = None
+
 
 class LiveOrderPayload(BaseModel):
     items: list[Line]
@@ -79,6 +84,7 @@ async def record_transaction(payload: TransactionPayload):
         payload.amount,
         [item.model_dump() for item in payload.items],
         payload.bill_closed,
+        payload.payment_type,
     )
 
     return {

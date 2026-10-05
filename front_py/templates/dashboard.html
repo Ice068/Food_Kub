@@ -98,6 +98,7 @@
                             <th scope="col">โต๊ะ</th>
                             <th scope="col">วิธีชำระ</th>
                             <th scope="col" class="num">ยอด (บาท)</th>
+                            <th scope="col">รูปแบบการจ่าย</th>
                             <th scope="col">สถานะ</th>
                         </tr>
                     </thead>
@@ -683,13 +684,26 @@
         if (button) button.focus();
     });
 
+    // ---------- รูปแบบการจ่าย ----------
+    function paymentTypeBadge(type) {
+        if (type === "full") {
+            return '<span class="badge payment-full">บิลรวม</span>';
+        }
+
+        if (type === "split") {
+            return '<span class="badge payment-split">แยกจ่ายรายคน</span>';
+        }
+
+        return '<span class="badge payment-unknown">ไม่ระบุรูปแบบ</span>';
+    }
+
     // ---------- ประวัติการชำระเงิน ----------
     function renderTransactions(data) {
         if (!data.recent_transactions.length) {
             setHTML(
                 "tx-body",
                 `<tr>
-                    <td colspan="5" class="empty">
+                    <td colspan="6" class="empty">
                         ยังไม่มีรายการชำระเงินวันนี้
                     </td>
                 </tr>`
@@ -719,6 +733,7 @@
                         )}
                     </td>
                     <td class="num">${money(transaction.amount)}</td>
+                    <td>${paymentTypeBadge(transaction.payment_type)}</td>
                     <td>${badge}</td>
                 </tr>
             `;
@@ -956,7 +971,6 @@
         }
 
         setHTML("top-list", topHTML);
-
         $("all-count").textContent = data.menu.length;
 
         let menuHTML = '<li class="empty">ยังไม่มีเมนู</li>';

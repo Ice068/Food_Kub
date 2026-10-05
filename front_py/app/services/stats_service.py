@@ -64,7 +64,16 @@ class StatsService:
         amount: float,
         items: list[dict],
         bill_closed: bool,
+        payment_type: Literal["full", "split"] | None = None,
     ) -> bool:
+        """ส่งรายการชำระเงินและรูปแบบการจ่าย
+
+        full = บิลรวม
+        split = แยกจ่ายรายคน
+        None = ไม่ระบุรูปแบบ
+
+        bill_closed เป็นสถานะปิดบิล แยกจากรูปแบบการจ่าย
+        """
         return await self._write(
             "POST",
             "/api/stats/transactions",
@@ -74,6 +83,7 @@ class StatsService:
                 "amount": amount,
                 "items": items,
                 "bill_closed": bill_closed,
+                "payment_type": payment_type,
             },
         )
 
