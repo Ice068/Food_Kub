@@ -56,7 +56,7 @@
 .table-tile.is-waiting .t-state { background: #ffe3e3; color: #c92a2a; }
 .table-tile .t-total { font-weight: 700; color: #b8380a; margin: 6px 0 4px; }
 .table-tile ul { list-style: none; font-size: 0.8rem; color: #495057; }
-.table-tile li { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.table-tile li { white-space: normal; overflow: hidden; text-overflow: ellipsis; overflow-wrap: anywhere; }
 .table-tile .t-free { color: #5c5f66; font-size: 0.85rem; margin-top: 6px; }
 
 /* รายละเอียดออเดอร์ของโต๊ะ */
@@ -86,7 +86,6 @@
 .table-dialog-total { display: flex; justify-content: space-between; gap: 12px; margin-top: 16px; font-size: 1rem; }
 
 /* สถานะอาหารในครัว */
-.table-tile li { white-space: normal; overflow-wrap: anywhere; }
 .kitchen-badge { display: inline-block; font-size: 0.7rem; padding: 2px 6px; border-radius: 99px; margin: 2px 0; }
 .kitchen-select { min-width: 112px; padding: 7px 8px; border: 1px solid #ced4da; border-radius: 8px; font: inherit; font-size: 0.85rem; cursor: pointer; }
 .kitchen-badge.is-cooking, .kitchen-select.is-cooking { background: #fff3bf; color: #674d00; }

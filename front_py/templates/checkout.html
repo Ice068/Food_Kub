@@ -271,11 +271,7 @@
     }
 
     .my-summary-card {
-        background: linear-gradient(
-            135deg,
-            #fff3e8 0%,
-            #ffe8cc 100%
-        );
+        background: linear-gradient(135deg, #fff3e8 0%, #ffe8cc 100%);
         border: 1px solid #f2c7ad;
         border-radius: 14px;
         padding: 20px 24px;
@@ -341,10 +337,10 @@
         <table class="checkout-table">
             <thead>
                 <tr>
-                    <th>รายการ</th>
-                    <th>หมวด</th>
-                    <th>จำนวน</th>
-                    <th>ราคา</th>
+                    <th scope="col">รายการ</th>
+                    <th scope="col">หมวด</th>
+                    <th scope="col">จำนวน</th>
+                    <th scope="col">ราคา</th>
                 </tr>
             </thead>
 
@@ -353,14 +349,11 @@
                 <tr>
                     <td>{{ item.name }}</td>
                     <td>
-                        <span class="badge-category">
-                            {{ item.category }}
-                        </span>
+                        <span class="badge-category">{{ item.category }}</span>
                     </td>
                     <td>{{ item.qty }}</td>
                     <td>
-                        {{ "%.2f"|format(item.price * item.qty) }}
-                        บาท
+                        {{ "%.2f"|format(item.price * item.qty) }} บาท
                     </td>
                 </tr>
                 {% endfor %}
@@ -369,20 +362,24 @@
             <tfoot>
                 {% if shared_paid is defined and shared_paid > 0 %}
                 <tr style="color: #2b8a3e; background: #f4fbf6;">
-                    <th colspan="3">
+                    <th colspan="3" scope="row">
                         หักส่วนของกลางที่เพื่อนร่วมโต๊ะชำระแล้ว
                     </th>
-                    <th>
-                        -{{ "%.2f"|format(shared_paid) }} บาท
-                    </th>
+                    <td>
+                        <strong>
+                            -{{ "%.2f"|format(shared_paid) }} บาท
+                        </strong>
+                    </td>
                 </tr>
                 {% endif %}
 
                 <tr>
-                    <th colspan="3">
+                    <th colspan="3" scope="row">
                         ยอดคงเหลือที่ต้องชำระของโต๊ะ
                     </th>
-                    <th>{{ "%.2f"|format(total) }} บาท</th>
+                    <td>
+                        <strong>{{ "%.2f"|format(total) }} บาท</strong>
+                    </td>
                 </tr>
             </tfoot>
         </table>
@@ -394,8 +391,7 @@
             💡 <strong>วิธีแยกจ่าย:</strong>
             <br>• ติ๊กเลือกอาหารส่วนตัวที่ต้องการชำระ
             <br>• รายการของกลางกำหนดโดยร้าน
-            สามารถเลือกจำนวนคนที่หาร
-            และรวมส่วนแบ่งในบิลนี้ได้
+            สามารถเลือกจำนวนคนที่หาร และรวมส่วนแบ่งในบิลนี้ได้
         </div>
 
         <h3>
@@ -403,10 +399,7 @@
             • เลือกจานส่วนตัวที่ต้องการชำระ
         </h3>
 
-        <div
-            class="split-items-list"
-            id="split-items-container"
-        >
+        <div class="split-items-list" id="split-items-container">
             {% for item in items %}
             <div
                 class="split-item-card is-selected"
@@ -425,12 +418,7 @@
                     >
 
                     <div class="split-item-info">
-                        <div style="
-                            display: flex;
-                            align-items: center;
-                            gap: 8px;
-                            flex-wrap: wrap;
-                        ">
+                        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
                             <h4>{{ item.name }}</h4>
 
                             <button
@@ -450,18 +438,12 @@
                             </span>
 
                             <span>
-                                ราคาจานละ
-                                {{ "%.2f"|format(item.price) }}
-                                บาท
+                                ราคาจานละ {{ "%.2f"|format(item.price) }} บาท
                             </span>
 
                             <span
                                 id="shared-status-text-{{ item.id }}"
-                                style="
-                                    color: #20c997;
-                                    font-weight: bold;
-                                    display: none;
-                                "
+                                style="color:#20c997;font-weight:bold;display:none;"
                             >
                                 • แชร์ของกลาง 👥
                             </span>
@@ -475,9 +457,7 @@
                         class="split-qty-selector"
                         id="qty-wrapper-{{ item.id }}"
                     >
-                        <label for="qty-{{ item.id }}">
-                            จำนวน:
-                        </label>
+                        <label for="qty-{{ item.id }}">จำนวน:</label>
 
                         <select
                             id="qty-{{ item.id }}"
@@ -499,18 +479,14 @@
                         id="qty-{{ item.id }}"
                         value="1"
                     >
-
-                    <span id="qty-label-{{ item.id }}">
-                        1 จาน
-                    </span>
+                    <span id="qty-label-{{ item.id }}">1 จาน</span>
                     {% endif %}
 
                     <div
                         class="split-item-price"
                         id="price-display-{{ item.id }}"
                     >
-                        {{ "%.2f"|format(item.price * item.qty) }}
-                        ฿
+                        {{ "%.2f"|format(item.price * item.qty) }} ฿
                     </div>
                 </div>
             </div>
@@ -523,17 +499,13 @@
                 <span class="shared-box-title">
                     🧊 ของกลางและเครื่องดื่มที่แชร์ร่วมกัน
                 </span>
-
                 <span
                     id="shared-pool-total-badge"
-                    style="font-weight: bold; color: #495057;"
+                    style="font-weight:bold;color:#495057;"
                 ></span>
             </div>
 
-            <div
-                class="shared-items-mini"
-                id="shared-items-list"
-            ></div>
+            <div class="shared-items-mini" id="shared-items-list"></div>
 
             <div class="shared-split-controls">
                 <div class="people-counter">
@@ -548,10 +520,7 @@
                         −
                     </button>
 
-                    <span
-                        class="people-count-display"
-                        id="people-count-text"
-                    >
+                    <span class="people-count-display" id="people-count-text">
                         2 คน
                     </span>
 
@@ -572,20 +541,11 @@
                             id="include-shared-check"
                             checked
                             onchange="recalculateSplit()"
-                            style="
-                                width: 18px;
-                                height: 18px;
-                                accent-color: #2b8a3e;
-                            "
+                            style="width:18px;height:18px;accent-color:#2b8a3e;"
                         >
-
                         <span>
                             รวมส่วนแบ่งของกลางในบิลนี้
-                            • +
-                            <span id="shared-per-person-amount">
-                                0.00
-                            </span>
-                            ฿
+                            • +<span id="shared-per-person-amount">0.00</span> ฿
                         </span>
                     </label>
                 </div>
@@ -596,16 +556,12 @@
         <div class="my-summary-card">
             <div class="summary-row">
                 <span>ค่าอาหารส่วนตัวที่คุณเลือก:</span>
-                <span id="summary-personal-amount">
-                    0.00 บาท
-                </span>
+                <span id="summary-personal-amount">0.00 บาท</span>
             </div>
 
             <div class="summary-row" id="summary-shared-row">
                 <span>ส่วนแบ่งของกลาง:</span>
-                <span id="summary-shared-amount">
-                    0.00 บาท
-                </span>
+                <span id="summary-shared-amount">0.00 บาท</span>
             </div>
 
             <div class="summary-row total-row">
@@ -677,7 +633,6 @@
                 required
                 {% if loop.first %}checked{% endif %}
             >
-
             <span>
                 {% if m.id == "qr_bank" %}
                     📱
@@ -695,14 +650,10 @@
                 class="btn-checkout"
                 id="submit-pay-button"
             >
-                สร้างคำขอชำระเงิน
-                • {{ "%.2f"|format(total) }} บาท
+                สร้างคำขอชำระเงิน • {{ "%.2f"|format(total) }} บาท
             </button>
 
-            <a
-                href="/cart{{ table_query }}"
-                class="btn-back"
-            >
+            <a href="/cart{{ table_query }}" class="btn-back">
                 กลับไปแก้ตะกร้า
             </a>
         </div>
@@ -725,15 +676,9 @@
 
     function updateSharedButtons() {
         allCartItems.forEach(item => {
-            const btn = document.getElementById(
-                `btn-shared-${item.id}`
-            );
-            const card = document.getElementById(
-                `card-${item.id}`
-            );
-            const chk = document.getElementById(
-                `check-${item.id}`
-            );
+            const btn = document.getElementById(`btn-shared-${item.id}`);
+            const card = document.getElementById(`card-${item.id}`);
+            const chk = document.getElementById(`check-${item.id}`);
             const statusTxt = document.getElementById(
                 `shared-status-text-${item.id}`
             );
@@ -755,10 +700,7 @@
             }
 
             if (card) {
-                card.classList.toggle(
-                    "is-shared-item",
-                    isShared
-                );
+                card.classList.toggle("is-shared-item", isShared);
             }
 
             if (chk) {
@@ -772,20 +714,14 @@
             }
 
             if (statusTxt) {
-                statusTxt.style.display = isShared
-                    ? "inline"
-                    : "none";
+                statusTxt.style.display = isShared ? "inline" : "none";
             }
         });
     }
 
     function initSharedItems() {
-        const container = document.getElementById(
-            "shared-items-list"
-        );
-        const badge = document.getElementById(
-            "shared-pool-total-badge"
-        );
+        const container = document.getElementById("shared-items-list");
+        const badge = document.getElementById("shared-pool-total-badge");
 
         container.textContent = "";
         let sharedTotal = 0;
@@ -803,21 +739,14 @@
 
             // ชื่อเมนูเป็นข้อความ ไม่ตีความเป็น HTML
             tag.textContent =
-                `🧊 ${item.name} x${item.qty} • ` +
-                `${cost.toFixed(2)} ฿`;
+                `🧊 ${item.name} x${item.qty} • ${cost.toFixed(2)} ฿`;
 
             container.appendChild(tag);
         });
 
         if (sharedTotal > 0) {
-            const paid = Math.min(
-                sharedTotal,
-                initialSharedPaid
-            );
-            const remaining = Math.max(
-                0,
-                sharedTotal - paid
-            );
+            const paid = Math.min(sharedTotal, initialSharedPaid);
+            const remaining = Math.max(0, sharedTotal - paid);
 
             badge.textContent = paid > 0
                 ? (
@@ -828,8 +757,7 @@
                 : `รวมของกลาง: ${sharedTotal.toFixed(2)} บาท`;
         } else {
             badge.textContent = "ยังไม่มีของกลาง";
-            container.textContent =
-                "ไม่มีรายการของกลางในบิลนี้";
+            container.textContent = "ไม่มีรายการของกลางในบิลนี้";
         }
     }
 
@@ -839,43 +767,29 @@
         }
 
         currentMode = mode;
+        document.getElementById("input-split-mode").value = mode;
 
-        document.getElementById(
-            "input-split-mode"
-        ).value = mode;
+        document.getElementById("tab-btn-full")
+            .classList.toggle("active", mode === "full");
 
-        document.getElementById(
-            "tab-btn-full"
-        ).classList.toggle("active", mode === "full");
+        document.getElementById("tab-btn-split")
+            .classList.toggle("active", mode === "split");
 
-        document.getElementById(
-            "tab-btn-split"
-        ).classList.toggle("active", mode === "split");
+        document.getElementById("panel-full")
+            .classList.toggle("active", mode === "full");
 
-        document.getElementById(
-            "panel-full"
-        ).classList.toggle("active", mode === "full");
-
-        document.getElementById(
-            "panel-split"
-        ).classList.toggle("active", mode === "split");
+        document.getElementById("panel-split")
+            .classList.toggle("active", mode === "split");
 
         recalculateSplit();
     }
 
     function onItemToggle(itemId) {
-        const chk = document.getElementById(
-            `check-${itemId}`
-        );
-        const card = document.getElementById(
-            `card-${itemId}`
-        );
+        const chk = document.getElementById(`check-${itemId}`);
+        const card = document.getElementById(`card-${itemId}`);
 
         if (card && chk) {
-            card.classList.toggle(
-                "is-selected",
-                chk.checked
-            );
+            card.classList.toggle("is-selected", chk.checked);
         }
 
         recalculateSplit();
@@ -886,43 +800,26 @@
             return;
         }
 
-        peopleCount = Math.max(
-            1,
-            Math.min(20, peopleCount + delta)
-        );
+        peopleCount = Math.max(1, Math.min(20, peopleCount + delta));
 
-        document.getElementById(
-            "people-count-text"
-        ).textContent = `${peopleCount} คน`;
+        document.getElementById("people-count-text").textContent =
+            `${peopleCount} คน`;
 
         recalculateSplit();
     }
 
     function recalculateSplit() {
-        const submitBtn = document.getElementById(
-            "submit-pay-button"
-        );
+        const submitBtn = document.getElementById("submit-pay-button");
 
         if (submitting) {
             return;
         }
 
         if (currentMode === "full") {
-            document.getElementById(
-                "input-selected-items"
-            ).value = "{}";
-
-            document.getElementById(
-                "input-shared-amount"
-            ).value = "0.00";
-
-            document.getElementById(
-                "input-shared-item-ids"
-            ).value = "[]";
-
-            document.getElementById(
-                "input-shared-note"
-            ).value = "";
+            document.getElementById("input-selected-items").value = "{}";
+            document.getElementById("input-shared-amount").value = "0.00";
+            document.getElementById("input-shared-item-ids").value = "[]";
+            document.getElementById("input-shared-note").value = "";
 
             submitBtn.textContent =
                 "สร้างคำขอชำระทั้งโต๊ะ • " +
@@ -935,12 +832,8 @@
         const selectedMap = {};
 
         allCartItems.forEach(item => {
-            const chk = document.getElementById(
-                `check-${item.id}`
-            );
-            const qtySelect = document.getElementById(
-                `qty-${item.id}`
-            );
+            const chk = document.getElementById(`check-${item.id}`);
+            const qtySelect = document.getElementById(`qty-${item.id}`);
             const priceDisplay = document.getElementById(
                 `price-display-${item.id}`
             );
@@ -963,8 +856,7 @@
             selectedMap[item.id] = qty;
 
             if (priceDisplay) {
-                priceDisplay.textContent =
-                    `${cost.toFixed(2)} ฿`;
+                priceDisplay.textContent = `${cost.toFixed(2)} ฿`;
             }
         });
 
@@ -976,77 +868,58 @@
             }
         });
 
-        const paid = Math.min(
-            sharedTotal,
-            initialSharedPaid
-        );
-        const sharedRemaining = Math.max(
-            0,
-            sharedTotal - paid
-        );
+        const paid = Math.min(sharedTotal, initialSharedPaid);
+        const sharedRemaining = Math.max(0, sharedTotal - paid);
 
         // ยอดที่ส่งต้องมีทศนิยมไม่เกิน 2 ตำแหน่ง
         const perPersonShared = sharedRemaining > 0
-            ? Number(
-                (sharedRemaining / peopleCount).toFixed(2)
-            )
+            ? Number((sharedRemaining / peopleCount).toFixed(2))
             : 0;
 
-        document.getElementById(
-            "shared-per-person-amount"
-        ).textContent = perPersonShared.toFixed(2);
+        document.getElementById("shared-per-person-amount").textContent =
+            perPersonShared.toFixed(2);
 
         const includeShared = document.getElementById(
             "include-shared-check"
         ).checked;
 
-        const activeSharedAmount =
-            includeShared && sharedRemaining > 0
-                ? perPersonShared
-                : 0;
+        const activeSharedAmount = includeShared && sharedRemaining > 0
+            ? perPersonShared
+            : 0;
 
         const myTotal = personalSum + activeSharedAmount;
 
-        document.getElementById(
-            "summary-personal-amount"
-        ).textContent = `${personalSum.toFixed(2)} บาท`;
+        document.getElementById("summary-personal-amount").textContent =
+            `${personalSum.toFixed(2)} บาท`;
 
-        document.getElementById(
-            "summary-shared-amount"
-        ).textContent = `${activeSharedAmount.toFixed(2)} บาท`;
+        document.getElementById("summary-shared-amount").textContent =
+            `${activeSharedAmount.toFixed(2)} บาท`;
 
-        document.getElementById(
-            "summary-total-amount"
-        ).textContent = `${myTotal.toFixed(2)} บาท`;
+        document.getElementById("summary-total-amount").textContent =
+            `${myTotal.toFixed(2)} บาท`;
 
         submitBtn.textContent =
             "สร้างคำขอชำระส่วนของฉัน • " +
             `${myTotal.toFixed(2)} บาท`;
 
-        document.getElementById(
-            "input-selected-items"
-        ).value = JSON.stringify(selectedMap);
+        document.getElementById("input-selected-items").value =
+            JSON.stringify(selectedMap);
 
-        document.getElementById(
-            "input-shared-amount"
-        ).value = activeSharedAmount.toFixed(2);
+        document.getElementById("input-shared-amount").value =
+            activeSharedAmount.toFixed(2);
 
-        document.getElementById(
-            "input-shared-item-ids"
-        ).value = JSON.stringify(
-            Array.from(sharedItemIds)
-        );
+        document.getElementById("input-shared-item-ids").value =
+            JSON.stringify(Array.from(sharedItemIds));
 
-        document.getElementById(
-            "input-shared-note"
-        ).value = includeShared && sharedRemaining > 0
-            ? (
-                `ของกลาง ${sharedTotal.toFixed(2)} บาท` +
-                ` • จ่ายแล้ว ${paid.toFixed(2)} บาท` +
-                ` • เหลือ ${sharedRemaining.toFixed(2)} บาท` +
-                ` • หาร ${peopleCount} คน`
-            )
-            : "";
+        document.getElementById("input-shared-note").value =
+            includeShared && sharedRemaining > 0
+                ? (
+                    `ของกลาง ${sharedTotal.toFixed(2)} บาท` +
+                    ` • จ่ายแล้ว ${paid.toFixed(2)} บาท` +
+                    ` • เหลือ ${sharedRemaining.toFixed(2)} บาท` +
+                    ` • หาร ${peopleCount} คน`
+                )
+                : "";
     }
 
     function prepareFormSubmission(event) {
@@ -1061,9 +934,7 @@
 
         if (!token || !token.value) {
             event.preventDefault();
-            alert(
-                "กรุณาเปิดหน้าชำระเงินใหม่ก่อนทำรายการ"
-            );
+            alert("กรุณาเปิดหน้าชำระเงินใหม่ก่อนทำรายการ");
             return false;
         }
 
@@ -1071,15 +942,11 @@
 
         if (currentMode === "split") {
             const selectedMap = JSON.parse(
-                document.getElementById(
-                    "input-selected-items"
-                ).value || "{}"
+                document.getElementById("input-selected-items").value || "{}"
             );
 
             const sharedAmount = parseFloat(
-                document.getElementById(
-                    "input-shared-amount"
-                ).value || "0"
+                document.getElementById("input-shared-amount").value || "0"
             );
 
             if (
@@ -1097,12 +964,9 @@
 
         submitting = true;
 
-        const button = document.getElementById(
-            "submit-pay-button"
-        );
+        const button = document.getElementById("submit-pay-button");
         button.disabled = true;
-        button.textContent =
-            "กำลังส่งคำขอ กรุณารอสักครู่...";
+        button.textContent = "กำลังส่งคำขอ กรุณารอสักครู่...";
 
         return true;
     }
@@ -1110,11 +974,7 @@
     // คืนสถานะปุ่มเมื่อกลับมาจาก browser history
     window.addEventListener("pageshow", () => {
         submitting = false;
-
-        document.getElementById(
-            "submit-pay-button"
-        ).disabled = false;
-
+        document.getElementById("submit-pay-button").disabled = false;
         recalculateSplit();
     });
 

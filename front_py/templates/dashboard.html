@@ -12,10 +12,14 @@
 
 <nav class="dash-nav" aria-label="เมนูลัด">
     <a class="brand" href="/admin/dashboard">🍽️ Food Kub Admin</a>
-    <a class="nav-link is-current" href="/admin/dashboard" aria-current="page">📊 แดชบอร์ด</a>
+    <a class="nav-link is-current" href="/admin/dashboard" aria-current="page">
+        📊 แดชบอร์ด
+    </a>
     <a class="nav-link" href="/admin/">🛠️ จัดการเมนู</a>
     <a class="nav-link" href="/admin/tables">🔳 QR Code โต๊ะ</a>
-    <a class="nav-link" href="/" target="_blank" rel="noopener">🛎️ หน้าลูกค้า</a>
+    <a class="nav-link" href="/" target="_blank" rel="noopener">
+        🛎️ หน้าลูกค้า
+    </a>
     <span class="spacer"></span>
     <a class="nav-link" href="/admin/logout">ออกจากระบบ 🚪</a>
 </nav>
@@ -72,7 +76,7 @@
         </article>
     </section>
 
-    <!-- โต๊ะและรายการชำระเงิน -->
+    <!-- โต๊ะและประวัติการชำระเงิน -->
     <div class="dash-grid">
         <section class="panel" aria-labelledby="h-live">
             <h2 id="h-live">มอนิเตอร์โต๊ะ &amp; ออเดอร์สด</h2>
@@ -111,8 +115,8 @@
                 รวมเงินเข้าทุกรายการของแต่ละวัน
             </p>
 
-            <div class="chart-box">
-                <canvas id="chart-trend" aria-hidden="true"></canvas>
+            <div class="chart-box" aria-hidden="true">
+                <canvas id="chart-trend" tabindex="-1"></canvas>
             </div>
 
             <div class="chart-data">
@@ -133,8 +137,8 @@
             <h2 id="h-hour">ยอดขายรายชั่วโมงวันนี้</h2>
             <p class="panel-sub">ช่วงเวลาไหนขายดีที่สุด</p>
 
-            <div class="chart-box">
-                <canvas id="chart-hour" aria-hidden="true"></canvas>
+            <div class="chart-box" aria-hidden="true">
+                <canvas id="chart-hour" tabindex="-1"></canvas>
             </div>
 
             <div class="chart-data">
