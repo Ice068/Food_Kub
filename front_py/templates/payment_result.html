@@ -2,6 +2,12 @@
 
 {% block extra_head %}
 <style>
+    output.pending-banner,
+    output.fully-paid-banner,
+    output.remaining-banner {
+        display: block;
+    }
+
     .split-summary-box {
         background: #f8f9fa;
         border: 1px solid #dee2e6;
@@ -10,18 +16,22 @@
         margin: 16px 0;
         text-align: left;
     }
+
     .split-summary-box h4 {
         color: #495057;
         margin-bottom: 8px;
         font-size: 0.95rem;
     }
+
     .paid-item-row {
         display: flex;
         justify-content: space-between;
+        gap: 12px;
         font-size: 0.9rem;
         padding: 4px 0;
         color: #212529;
     }
+
     .remaining-banner {
         background: #e7f5ff;
         border: 1px solid #74c0fc;
@@ -31,6 +41,7 @@
         margin: 16px 0;
         font-size: 0.95rem;
     }
+
     .fully-paid-banner {
         background: #ebfbee;
         border: 1px solid #8ce99a;
@@ -41,82 +52,213 @@
         font-size: 1rem;
         font-weight: bold;
     }
+
+    .pending-banner {
+        background: #fff9db;
+        border: 1px solid #ffe066;
+        color: #795548;
+        border-radius: 10px;
+        padding: 14px;
+        margin: 16px 0;
+        font-size: 0.95rem;
+        line-height: 1.6;
+    }
+
     .result-actions {
         display: flex;
         flex-direction: column;
         gap: 10px;
         margin-top: 18px;
     }
+
+    .result-actions a {
+        text-decoration: none;
+        text-align: center;
+    }
+
+    .qr-image {
+        display: block;
+        max-width: 260px;
+        width: 100%;
+        height: auto;
+        margin: 16px auto;
+    }
+
+    .qr-hint {
+        font-size: 0.9rem;
+        color: #495057;
+        line-height: 1.6;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
+{% set confirmed = payment_confirmed|default(false) %}
+
 <div class="result-container">
     {% if error %}
     <div class="result-card result-error">
-        <h2>❌ ทำรายการไม่สำเร็จ</h2>
+        <h2>⚠️ ตรวจสอบรายการชำระเงิน</h2>
         <p>{{ error }}</p>
-        <a href="/checkout{{ table_query }}" class="btn-checkout">ลองอีกครั้ง</a>
+
+        <div class="result-actions">
+            <a
+                href="/checkout{{ table_query }}"
+                class="btn-checkout"
+            >
+                ตรวจสอบสถานะรายการ
+            </a>
+
+            <a
+                href="/cart{{ table_query }}"
+                class="btn-back"
+            >
+                กลับไปดูบิล
+            </a>
+        </div>
     </div>
 
     {% else %}
     <div class="result-card">
-        {% if is_split %}
-        <h2>👥 บิลแยกชำระของคุณ</h2>
-        <p class="result-method">วิธีชำระเงิน: <strong>{{ result.method_name }}</strong></p>
-        <p class="result-amount">{{ "%.2f"|format(result.amount) }} บาท</p>
-        <p class="result-message">{{ result.message }}</p>
+        {% if confirmed %}
+            <h2>✅ ยืนยันการชำระเงินแล้ว</h2>
+        {% else %}
+            <h2>⏳ รอยืนยันการชำระเงิน</h2>
+        {% endif %}
 
-        <!-- รายการที่จ่ายในรอบนี้ -->
+        <p>
+            {% if is_split %}
+                👥 แยกชำระส่วนของคุณ
+            {% else %}
+                💳 ชำระทั้งบิล
+            {% endif %}
+        </p>
+
+        <p class="result-method">
+            วิธีชำระเงิน:
+            <strong>{{ result.method_name }}</strong>
+        </p>
+
+        <p class="result-amount">
+            {{ "%.2f"|format(total) }} บาท
+        </p>
+
+        <p class="result-message">
+            {{ result.message }}
+        </p>
+
+        {% if not confirmed %}
+        <output class="pending-banner">
+            รายการนี้ยังอยู่ระหว่างรอยืนยันรับเงิน
+            บิลยังไม่ถูกหักหรือปิด
+            <br>
+            หากชำระแล้ว กรุณาให้พนักงานตรวจสอบ
+            และอย่าชำระรายการเดิมซ้ำ
+        </output>
+
+        {% if result.qr_image %}
+        <img
+            class="qr-image"
+            src="data:image/png;base64,{{ result.qr_image }}"
+            alt="QR Code พร้อมเพย์สำหรับรายการนี้"
+        >
+
+        <p class="qr-hint">
+            หากยังไม่ได้ชำระ ให้เปิดแอปธนาคารแล้วสแกน QR นี้
+            ตรวจสอบชื่อผู้รับและยอดเงินก่อนยืนยัน
+            หากชำระแล้วไม่ต้องสแกนจ่ายซ้ำ
+        </p>
+        {% endif %}
+        {% endif %}
+
         <div class="split-summary-box">
-            <h4>📋 รายการที่ชำระในบิลนี้:</h4>
+            <h4>
+                {% if confirmed %}
+                    📋 รายการที่ยืนยันการชำระแล้ว:
+                {% else %}
+                    📋 รายการในคำขอชำระเงินนี้:
+                {% endif %}
+            </h4>
+
             {% for it in pay_items %}
             <div class="paid-item-row">
-                <span>• {{ it.name }} x{{ it.qty }}</span>
-                <strong>{{ "%.2f"|format(it.price * it.qty) }} ฿</strong>
+                <span>
+                    • {{ it.name }} × {{ it.qty }}
+                </span>
+
+                <strong>
+                    {{ "%.2f"|format(it.price * it.qty) }} ฿
+                </strong>
             </div>
             {% endfor %}
         </div>
 
-        {% if is_fully_paid %}
-        <div class="fully-paid-banner">
-            🎉 โต๊ะนี้ชำระเงินครบทุกรายการเรียบร้อยแล้ว ขอบคุณครับ!
-        </div>
-        <form action="/cart/clear{{ table_query }}" method="post">
-            <button type="submit" class="btn-checkout">เสร็จสิ้น • ปิดบิลโต๊ะ</button>
-        </form>
+        {% if confirmed %}
+            {% if is_fully_paid %}
+            <output class="fully-paid-banner">
+                🎉 ชำระเงินครบทุกรายการแล้ว
+                ระบบปิดบิลเรียบร้อย ขอบคุณครับ!
+            </output>
+
+            <div class="result-actions">
+                <a
+                    href="/{{ table_query }}"
+                    class="btn-checkout"
+                >
+                    กลับไปหน้าเมนู
+                </a>
+            </div>
+
+            {% else %}
+            <output class="remaining-banner">
+                ℹ️ ยอดค้างชำระที่เหลือ:
+                <strong>
+                    {{ "%.2f"|format(remaining_total) }} บาท
+                </strong>
+            </output>
+
+            <div class="result-actions">
+                <a
+                    href="/checkout{{ table_query }}"
+                    class="btn-checkout"
+                    style="background: #2b8a3e;"
+                >
+                    ชำระรายการที่เหลือต่อ
+                </a>
+
+                <a
+                    href="/cart{{ table_query }}"
+                    class="btn-back"
+                >
+                    กลับไปดูบิล
+                </a>
+            </div>
+            {% endif %}
+
         {% else %}
         <div class="remaining-banner">
-            ℹ️ ยังมียอดค้างชำระของโต๊ะอีก: <strong>{{ "%.2f"|format(remaining_total) }} บาท</strong>
-            <br><small>เพื่อนในโต๊ะสามารถเข้าสแกนจ่ายรายการที่เหลือต่อได้เลย</small>
+            ยอดค้างชำระของบิลยังคงเป็น
+            <strong>
+                {{ "%.2f"|format(remaining_total) }} บาท
+            </strong>
+            จนกว่าจะยืนยันรับเงิน
         </div>
+
         <div class="result-actions">
-            <a href="/checkout{{ table_query }}" class="btn-checkout" style="background: #2b8a3e; text-decoration: none;">
-                ชำระรายการที่เหลือต่อ
+            <a
+                href="/checkout{{ table_query }}"
+                class="btn-checkout"
+            >
+                ตรวจสอบสถานะรายการ
             </a>
-            <a href="/{{ table_query }}" class="btn-back" style="text-decoration: none;">
-                กลับไปดูหน้าเมนู
+
+            <a
+                href="/cart{{ table_query }}"
+                class="btn-back"
+            >
+                กลับไปดูบิล
             </a>
         </div>
-        {% endif %}
-
-        {% else %}
-        <!-- โหมดชำระทั้งโต๊ะตามปกติ -->
-        <h2>✅ รับออเดอร์แล้ว</h2>
-        <p class="result-method">วิธีชำระเงิน: <strong>{{ result.method_name }}</strong></p>
-        <p class="result-amount">{{ "%.2f"|format(result.amount) }} บาท</p>
-        <p class="result-message">{{ result.message }}</p>
-
-        {% if result.qr_image %}
-        <img class="qr-image"
-             src="data:image/png;base64,{{ result.qr_image }}"
-             alt="QR Code พร้อมเพย์">
-        <p class="qr-hint">เปิดแอปธนาคาร แล้วสแกน QR นี้ ยอดเงินจะขึ้นให้อัตโนมัติ</p>
-        {% endif %}
-
-        <form action="/cart/clear{{ table_query }}" method="post">
-            <button type="submit" class="btn-checkout">เสร็จสิ้น</button>
-        </form>
         {% endif %}
     </div>
     {% endif %}

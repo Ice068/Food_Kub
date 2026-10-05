@@ -24,12 +24,13 @@ class Application:
 
         self.app.add_middleware(
             SessionMiddleware,
-            secret_key="food-kub-secret-key"
+            secret_key="food-kub-secret-key",
         )
 
         self.menu_service = MenuService()
         self.cart_service = CartService()
         self.payment_service = PaymentService()
+        self.stats_service = StatsService()
         self.template_service = TemplateService(
             settings.TEMPLATES_DIR
         )
@@ -45,41 +46,38 @@ class Application:
         )
 
     def _include_routers(self):
-        # Services
-        stats_service = StatsService()
-
-        # Routers
         menu_router = MenuRouter(
             self.menu_service,
             self.template_service,
-            self.cart_service
+            self.cart_service,
         )
 
         cart_router = CartRouter(
             self.cart_service,
             self.menu_service,
-            self.template_service
+            self.template_service,
+            stats_service=self.stats_service,
         )
 
         admin_router = AdminRouter(
             self.menu_service,
-            self.template_service
+            self.template_service,
         )
 
         payment_router = PaymentRouter(
             self.payment_service,
             self.cart_service,
             self.menu_service,
-            self.template_service
+            self.template_service,
+            stats_service=self.stats_service,
         )
 
         dashboard_router = DashboardRouter(
-            stats_service,
-            self.menu_service,
-            self.template_service
+            stats_service=self.stats_service,
+            menu_service=self.menu_service,
+            template_service=self.template_service,
         )
 
-        # Include routers
         self.app.include_router(menu_router.router)
         self.app.include_router(cart_router.router)
         self.app.include_router(admin_router.router)

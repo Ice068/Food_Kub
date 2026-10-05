@@ -1,13 +1,15 @@
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 
+from google.cloud.firestore import transactional
+
 from app.core.config import settings
 from app.core.db import db
 
-# เวลาไทย (UTC+7) -- กำหนดเองเพื่อไม่ต้องพึ่ง tzdata บน Windows
+# เวลาไทย UTC+7
 TH_TZ = timezone(timedelta(hours=7))
 
-# id พิเศษที่หน้าบ้านใช้แทน "ส่วนแบ่งของกลาง" ตอนแยกจ่าย ไม่ใช่เมนูจริง
+# รายการพิเศษสำหรับส่วนแบ่งของกลาง ไม่ใช่เมนูจริง
 SHARED_PSEUDO_ID = 9999
 
 
@@ -20,15 +22,7 @@ def _day(dt: datetime) -> str:
 
 
 class StatsService:
-    """เก็บและสรุปสถิติของร้านใน Firestore สำหรับหน้าแดชบอร์ดของเจ้าของร้าน
-
-    collections:
-      - transactions : เงินเข้าแต่ละครั้ง (1 บิลอาจมีหลายรายการถ้าแยกจ่าย)
-      - order_events : อาหารที่ลูกค้าส่งเข้าครัวแต่ละรอบ (ใช้จัดอันดับเมนูขายดี)
-      - live_orders  : บิลที่ยังเปิดอยู่ของแต่ละโต๊ะ (1 เอกสารต่อ 1 โต๊ะ)
-
-    ทุก query ใช้ equality บนฟิลด์ "date" อย่างเดียว จึงไม่ต้องสร้าง composite index
-    """
+    """เก็บและสรุปสถิติของร้านใน Firestore สำหรับแดชบอร์ด"""
 
     def __init__(self):
         self.db = db
@@ -36,26 +30,39 @@ class StatsService:
         self.order_events = "order_events"
         self.live_orders = "live_orders"
 
-    # ---------- เขียนข้อมูล ----------
+    # ---------- บันทึกออเดอร์ ----------
 
-    def record_order(self, table: int | None, items: list[dict]) -> dict:
-        """บันทึกว่าลูกค้าส่งอาหารเข้าครัวรอบนี้"""
+    def record_order(
+        self,
+        table: int | None,
+        items: list[dict],
+    ) -> dict:
+        """บันทึกรายการอาหารที่ส่งเข้าครัวแต่ละรอบ"""
         now = _now()
+
         doc = {
             "table": table,
             "items": [self._clean_item(i) for i in items],
             "created_at": now.isoformat(),
             "date": _day(now),
         }
+
         self.db.collection(self.order_events).document().set(doc)
         return doc
 
+    # ---------- บันทึกการชำระเงิน ----------
+
     def record_transaction(
-        self, table: int | None, method: str, amount: float,
-        items: list[dict], bill_closed: bool,
+        self,
+        table: int | None,
+        method: str,
+        amount: float,
+        items: list[dict],
+        bill_closed: bool,
     ) -> dict:
-        """บันทึกเงินเข้า 1 รายการ bill_closed=True คือจ่ายครบและปิดบิลของโต๊ะแล้ว"""
+        """บันทึกเงินเข้า โดย bill_closed=True เมื่อจ่ายครบ"""
         now = _now()
+
         doc = {
             "table": table,
             "method": method,
@@ -65,26 +72,243 @@ class StatsService:
             "created_at": now.isoformat(),
             "date": _day(now),
         }
+
         ref = self.db.collection(self.transactions).document()
         ref.set(doc)
+
         return {"id": ref.id, **doc}
 
-    def set_live_order(self, table: int, items: list[dict]) -> None:
-        """อัปเดตบิลที่เปิดอยู่ของโต๊ะ ถ้าไม่มีรายการเหลือ = โต๊ะว่าง ให้ลบทิ้ง"""
+    # ---------- อัปเดตบิลและสถานะโต๊ะ ----------
+
+    def set_live_order(
+        self,
+        table: int,
+        items: list[dict],
+        status: str | None = None,
+    ) -> None:
+        """อัปเดตบิล สถานะโต๊ะ และรักษาสถานะอาหาร
+
+        dining = กำลังรับประทาน
+        waiting_payment = รอชำระ
+
+        เมนูใหม่หรือจำนวนเพิ่ม เริ่มที่ cooking
+        จำนวนเท่าเดิมหรือลดลง รักษาสถานะอาหารเดิม
+
+        items ว่างยังลบโต๊ะตามพฤติกรรมเดิม
+        หลังจ่ายครบต้องเรียก mark_table_paid แทนส่ง items ว่าง
+        เพื่อเก็บโต๊ะไว้จนพนักงานกด Reset
+        """
+        if status not in (None, "dining", "waiting_payment"):
+            raise ValueError("Invalid table status")
+
         ref = self.db.collection(self.live_orders).document(str(table))
-        clean = [self._clean_item(i) for i in items if int(i.get("qty", 0)) > 0]
-        if not clean:
-            ref.delete()
-            return
-        existing = ref.get()
-        opened_at = (existing.to_dict() or {}).get("opened_at") if existing.exists else None
-        now = _now().isoformat()
-        ref.set({
-            "table": table,
-            "items": clean,
-            "opened_at": opened_at or now,
-            "updated_at": now,
-        })
+
+        clean = [
+            self._clean_item(i)
+            for i in items
+            if int(i.get("qty", 0)) > 0
+        ]
+
+        @transactional
+        def save(transaction):
+            existing = ref.get(transaction=transaction)
+
+            previous = (
+                (existing.to_dict() or {})
+                if existing.exists
+                else {}
+            )
+
+            if not clean:
+                transaction.delete(ref)
+                return
+
+            previous_items = {
+                i["id"]: i
+                for i in previous.get("items", [])
+            }
+
+            merged = []
+
+            for item in clean:
+                old = previous_items.get(item["id"])
+                kitchen_status = "cooking"
+
+                if old and item["qty"] <= old["qty"]:
+                    kitchen_status = old.get(
+                        "kitchen_status",
+                        "cooking",
+                    )
+
+                merged.append({
+                    **item,
+                    "kitchen_status": kitchen_status,
+                })
+
+            now = _now().isoformat()
+
+            # เขียนบิลที่ยังมีรายการค้างชำระ
+            # ไม่คง paid=True จากบิลที่จ่ายครบไปแล้ว
+            transaction.set(ref, {
+                "table": table,
+                "items": merged,
+                "status": status or previous.get("status", "dining"),
+                "opened_at": previous.get("opened_at") or now,
+                "updated_at": now,
+            })
+
+        save(self.db.transaction())
+
+    # ---------- ชำระครบ รอเคลียร์โต๊ะ ----------
+
+    def mark_table_paid(
+        self,
+        table: int,
+        paid_items: list[dict],
+    ) -> None:
+        """เรียกหลังยืนยันว่าชำระครบแล้วเท่านั้น
+
+        ล้างรายการค้างชำระ แต่เก็บโต๊ะไว้เป็น paid=True
+        เพื่อให้พนักงานกด Reset หลังลูกค้าลุกออก
+
+        ตรวจรายการปัจจุบันกับรายการที่ชำระ
+        ป้องกันล้างออเดอร์ใหม่ที่เพิ่มระหว่างชำระเงิน
+        """
+        ref = self.db.collection(self.live_orders).document(str(table))
+
+        @transactional
+        def save(transaction):
+            snapshot = ref.get(transaction=transaction)
+
+            previous = (
+                (snapshot.to_dict() or {})
+                if snapshot.exists
+                else {}
+            )
+
+            quantities = defaultdict(int)
+
+            for item in paid_items:
+                quantities[int(item["id"])] += int(item["qty"])
+
+            has_unpaid_orders = any(
+                item["qty"] > quantities[item["id"]]
+                for item in previous.get("items", [])
+            )
+
+            if has_unpaid_orders:
+                raise ValueError("New unpaid orders exist")
+
+            now = _now().isoformat()
+
+            transaction.set(ref, {
+                "table": table,
+                "items": [],
+                "status": "waiting_payment",
+                "paid": True,
+                "opened_at": previous.get("opened_at") or now,
+                "updated_at": now,
+            })
+
+        save(self.db.transaction())
+
+    # ---------- Reset Table ----------
+
+    def reset_table(
+        self,
+        table: int,
+        opened_at: str,
+    ) -> bool:
+        """เคลียร์เฉพาะโต๊ะที่ชำระครบแล้ว
+
+        ตรวจ opened_at ว่ายังเป็นบิลเดียวกับที่พนักงานเปิดดู
+        ลบเฉพาะ live_orders ไม่ลบประวัติยอดขายหรือการชำระเงิน
+
+        คืน False เมื่อโต๊ะว่างอยู่แล้ว
+        """
+        ref = self.db.collection(self.live_orders).document(str(table))
+
+        @transactional
+        def reset(transaction):
+            snapshot = ref.get(transaction=transaction)
+
+            if not snapshot.exists:
+                return False
+
+            data = snapshot.to_dict() or {}
+
+            if data.get("opened_at") != opened_at:
+                raise ValueError("Table bill has changed")
+
+            if not data.get("paid") or data.get("items"):
+                raise ValueError("Table is not fully paid")
+
+            transaction.delete(ref)
+            return True
+
+        return reset(self.db.transaction())
+
+    # ---------- อัปเดตสถานะอาหาร ----------
+
+    def set_kitchen_status(
+        self,
+        table: int,
+        item_id: int,
+        status: str,
+        expected_qty: int,
+        opened_at: str,
+    ) -> dict | None:
+        """เปลี่ยนสถานะอาหารทั้งแถวเมนู
+
+        cooking = กำลังทำ
+        ready = พร้อมเสิร์ฟ
+        served = เสิร์ฟแล้ว
+
+        ตรวจว่าบิลและจำนวนยังตรงกับหน้าที่พนักงานเปิดอยู่
+        """
+        if status not in ("cooking", "ready", "served"):
+            raise ValueError("Invalid kitchen status")
+
+        ref = self.db.collection(self.live_orders).document(str(table))
+
+        @transactional
+        def update(transaction):
+            snapshot = ref.get(transaction=transaction)
+
+            if not snapshot.exists:
+                return None
+
+            data = snapshot.to_dict() or {}
+
+            if data.get("opened_at") != opened_at:
+                raise ValueError("Table bill has changed")
+
+            items = [
+                dict(item)
+                for item in data.get("items", [])
+            ]
+
+            item = next(
+                (i for i in items if i["id"] == item_id),
+                None,
+            )
+
+            if item is None:
+                return None
+
+            if item["qty"] != expected_qty:
+                raise ValueError("Order quantity has changed")
+
+            item["kitchen_status"] = status
+
+            transaction.update(ref, {
+                "items": items,
+                "updated_at": _now().isoformat(),
+            })
+
+            return item
+
+        return update(self.db.transaction())
 
     @staticmethod
     def _clean_item(item: dict) -> dict:
@@ -101,16 +325,33 @@ class StatsService:
         now = _now()
         today = _day(now)
         yesterday = _day(now - timedelta(days=1))
-        day_keys = [_day(now - timedelta(days=n)) for n in range(days - 1, -1, -1)]
+
+        day_keys = [
+            _day(now - timedelta(days=n))
+            for n in range(days - 1, -1, -1)
+        ]
 
         tx_by_day = self._transactions_by_day(day_keys)
         today_tx = tx_by_day.get(today, [])
         yesterday_tx = tx_by_day.get(yesterday, [])
 
-        revenue_today = round(sum(t["amount"] for t in today_tx), 2)
-        revenue_yesterday = round(sum(t["amount"] for t in yesterday_tx), 2)
-        bills_today = sum(1 for t in today_tx if t.get("bill_closed"))
-        bills_yesterday = sum(1 for t in yesterday_tx if t.get("bill_closed"))
+        revenue_today = round(
+            sum(t["amount"] for t in today_tx),
+            2,
+        )
+
+        revenue_yesterday = round(
+            sum(t["amount"] for t in yesterday_tx),
+            2,
+        )
+
+        bills_today = sum(
+            1 for t in today_tx if t.get("bill_closed")
+        )
+
+        bills_yesterday = sum(
+            1 for t in yesterday_tx if t.get("bill_closed")
+        )
 
         top_dishes = self._top_dishes(today, limit=5)
         live = self._live_tables()
@@ -120,14 +361,21 @@ class StatsService:
             "revenue": {
                 "today": revenue_today,
                 "yesterday": revenue_yesterday,
-                "change_pct": self._change_pct(revenue_today, revenue_yesterday),
+                "change_pct": self._change_pct(
+                    revenue_today,
+                    revenue_yesterday,
+                ),
             },
             "bills": {
                 "today": bills_today,
                 "yesterday": bills_yesterday,
-                "change_pct": self._change_pct(bills_today, bills_yesterday),
+                "change_pct": self._change_pct(
+                    bills_today,
+                    bills_yesterday,
+                ),
             },
             "tables": {
+                # รวมโต๊ะชำระแล้วที่ยังรอพนักงานเคลียร์
                 "active": len(live),
                 "total": settings.TOTAL_TABLES,
                 "live": live,
@@ -136,61 +384,146 @@ class StatsService:
             "top_dishes": top_dishes,
             "recent_transactions": [
                 self._public_tx(t)
-                for t in sorted(today_tx, key=lambda t: t["created_at"], reverse=True)[:10]
+                for t in sorted(
+                    today_tx,
+                    key=lambda t: t["created_at"],
+                    reverse=True,
+                )[:10]
             ],
             "sales_trend": [
-                {"date": d, "total": round(sum(t["amount"] for t in tx_by_day.get(d, [])), 2)}
+                {
+                    "date": d,
+                    "total": round(
+                        sum(
+                            t["amount"]
+                            for t in tx_by_day.get(d, [])
+                        ),
+                        2,
+                    ),
+                }
                 for d in day_keys
             ],
             "sales_by_hour": self._sales_by_hour(today_tx),
         }
 
-    def _transactions_by_day(self, day_keys: list[str]) -> dict[str, list[dict]]:
-        # Firestore "in" รองรับสูงสุด 30 ค่า เรียกแค่ 7 วันจึงพอ
-        docs = self.db.collection(self.transactions).where("date", "in", day_keys).stream()
+    def _transactions_by_day(
+        self,
+        day_keys: list[str],
+    ) -> dict[str, list[dict]]:
+        docs = (
+            self.db.collection(self.transactions)
+            .where("date", "in", day_keys)
+            .stream()
+        )
+
         grouped: dict[str, list[dict]] = defaultdict(list)
+
         for doc in docs:
             data = doc.to_dict()
             data["id"] = doc.id
             grouped[data["date"]].append(data)
+
         return grouped
 
-    def _top_dishes(self, day: str, limit: int) -> list[dict]:
-        docs = self.db.collection(self.order_events).where("date", "==", day).stream()
+    def _top_dishes(
+        self,
+        day: str,
+        limit: int,
+    ) -> list[dict]:
+        docs = (
+            self.db.collection(self.order_events)
+            .where("date", "==", day)
+            .stream()
+        )
+
         counts: dict[int, dict] = {}
+
         for doc in docs:
             for item in doc.to_dict().get("items", []):
                 if item["id"] == SHARED_PSEUDO_ID:
                     continue
-                row = counts.setdefault(item["id"], {"id": item["id"], "name": item["name"], "qty": 0})
+
+                row = counts.setdefault(
+                    item["id"],
+                    {
+                        "id": item["id"],
+                        "name": item["name"],
+                        "qty": 0,
+                    },
+                )
+
                 row["qty"] += item["qty"]
-        ranked = sorted(counts.values(), key=lambda r: (-r["qty"], r["id"]))
+
+        ranked = sorted(
+            counts.values(),
+            key=lambda r: (-r["qty"], r["id"]),
+        )
+
         return ranked[:limit]
 
     def _live_tables(self) -> list[dict]:
         tables = []
+
         for doc in self.db.collection(self.live_orders).stream():
             data = doc.to_dict()
-            items = data.get("items", [])
-            if not items:
+
+            items = [
+                {
+                    **item,
+                    "kitchen_status": item.get(
+                        "kitchen_status",
+                        "cooking",
+                    ),
+                }
+                for item in data.get("items", [])
+            ]
+
+            paid = bool(data.get("paid", False))
+
+            # โต๊ะจ่ายครบยังต้องแสดง แม้รายการค้างชำระว่าง
+            # จนกว่าพนักงานจะกด Reset
+            if not items and not paid:
                 continue
+
             tables.append({
                 "table": data.get("table"),
+                "status": data.get("status", "dining"),
+                "paid": paid,
                 "items": items,
-                "total": round(sum(i["price"] * i["qty"] for i in items), 2),
+                "total": round(
+                    sum(i["price"] * i["qty"] for i in items),
+                    2,
+                ),
                 "item_count": sum(i["qty"] for i in items),
                 "opened_at": data.get("opened_at"),
             })
-        tables.sort(key=lambda t: (t["table"] is None, t["table"]))
+
+        tables.sort(
+            key=lambda t: (
+                t["table"] is None,
+                t["table"],
+            )
+        )
+
         return tables
 
     @staticmethod
     def _sales_by_hour(today_tx: list[dict]) -> list[dict]:
         totals = [0.0] * 24
+
         for t in today_tx:
-            hour = datetime.fromisoformat(t["created_at"]).astimezone(TH_TZ).hour
+            hour = (
+                datetime.fromisoformat(t["created_at"])
+                .astimezone(TH_TZ)
+                .hour
+            )
+
             totals[hour] += t["amount"]
-        return [{"hour": h, "total": round(v, 2)} for h, v in enumerate(totals)]
+
+        return [
+            {"hour": h, "total": round(v, 2)}
+            for h, v in enumerate(totals)
+        ]
 
     @staticmethod
     def _public_tx(t: dict) -> dict:
@@ -201,12 +534,17 @@ class StatsService:
             "amount": t["amount"],
             "bill_closed": t.get("bill_closed", False),
             "created_at": t["created_at"],
-            "item_count": sum(i["qty"] for i in t.get("items", [])),
+            "item_count": sum(
+                i["qty"] for i in t.get("items", [])
+            ),
         }
 
     @staticmethod
-    def _change_pct(today: float, yesterday: float) -> float | None:
-        """เปลี่ยนแปลงเทียบเมื่อวานเป็น % -- None ถ้าเมื่อวานเป็น 0 (เทียบไม่ได้)"""
+    def _change_pct(
+        today: float,
+        yesterday: float,
+    ) -> float | None:
         if not yesterday:
             return None
+
         return round((today - yesterday) / yesterday * 100, 1)

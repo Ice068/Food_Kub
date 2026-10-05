@@ -1,18 +1,18 @@
-/* แดชบอร์ดเจ้าของร้าน -- ใช้โทนสีส้มเดียวกับทั้งเว็บ (#d9480f) */
-.dash { max-width: 1280px; margin: 0 auto; padding: 20px 20px 48px; }
+/* แดชบอร์ดเจ้าของร้าน — ปรับสีข้อความให้อ่านชัดขึ้น */
+.dash { max-width: 1280px; margin: 0 auto; padding: 20px 20px 48px; color: #212529; }
 
 /* ---------- แถบเมนูลัด ---------- */
 .dash-nav {
     position: sticky; top: 0; z-index: 10;
     display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
-    padding: 12px 20px; background: #d9480f; color: #fff;
+    padding: 12px 20px; background: #b8380a; color: #fff;
 }
 .dash-nav .brand { font-weight: 700; font-size: 1.15rem; margin-right: 12px; color: #fff; text-decoration: none; }
 .dash-nav a.nav-link {
     color: #fff; text-decoration: none; padding: 8px 14px; border-radius: 8px;
-    background: rgba(255, 255, 255, 0.14); font-size: 0.95rem;
+    background: #b8380a; font-size: 0.95rem;
 }
-.dash-nav a.nav-link:hover, .dash-nav a.nav-link.is-current { background: rgba(255, 255, 255, 0.3); }
+.dash-nav a.nav-link:hover, .dash-nav a.nav-link.is-current { background: #9c2e08; }
 .dash-nav .spacer { flex: 1; }
 
 .dash-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px; margin: 8px 0 18px; }
@@ -31,7 +31,7 @@
 .metric-card .value { font-size: 2rem; font-weight: 700; margin: 8px 0 6px; line-height: 1.2; overflow-wrap: anywhere; }
 .metric-card .value small { font-size: 1rem; font-weight: 500; color: #5c5f66; }
 .metric-card .sub { font-size: 0.85rem; color: #5c5f66; }
-.trend-up { color: #2b8a3e; font-weight: 600; }
+.trend-up { color: #1f6b2d; font-weight: 600; }
 .trend-down { color: #c92a2a; font-weight: 600; }
 .progress { height: 8px; background: #f1f3f5; border-radius: 99px; overflow: hidden; margin-top: 8px; }
 .progress > span { display: block; height: 100%; background: #d9480f; border-radius: 99px; transition: width 0.4s; }
@@ -41,19 +41,60 @@
 .panel { background: #fff; border-radius: 14px; padding: 20px; box-shadow: 0 1px 8px rgba(0, 0, 0, 0.07); min-width: 0; }
 .panel h2 { font-size: 1.1rem; margin-bottom: 4px; }
 .panel .panel-sub { color: #5c5f66; font-size: 0.85rem; margin-bottom: 14px; }
-.empty { color: #868e96; padding: 18px 0; text-align: center; }
+.empty { color: #5c5f66; padding: 18px 0; text-align: center; }
 
 /* โต๊ะ & ออเดอร์สด */
 .table-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
 .table-tile { border: 1px solid #e9ecef; border-radius: 12px; padding: 12px; background: #f8f9fa; min-height: 92px; }
-.table-tile .t-name { font-weight: 700; display: flex; justify-content: space-between; align-items: center; }
+.table-tile .t-name { font-weight: 700; display: flex; flex-wrap: wrap; gap: 6px; justify-content: space-between; align-items: center; }
 .table-tile .t-state { font-size: 0.75rem; padding: 2px 8px; border-radius: 99px; background: #e9ecef; color: #495057; }
-.table-tile.is-active { background: #fff4e6; border-color: #ffa94d; }
-.table-tile.is-active .t-state { background: #d9480f; color: #fff; }
-.table-tile .t-total { font-weight: 700; color: #d9480f; margin: 6px 0 4px; }
+.table-tile.is-free { background: #ebfbee; border-color: #8ce99a; }
+.table-tile.is-free .t-state { background: #d3f9d8; color: #1f6b2d; }
+.table-tile.is-dining { background: #fff9db; border-color: #ffd43b; }
+.table-tile.is-dining .t-state { background: #ffec99; color: #674d00; }
+.table-tile.is-waiting { background: #fff5f5; border-color: #ffa8a8; }
+.table-tile.is-waiting .t-state { background: #ffe3e3; color: #c92a2a; }
+.table-tile .t-total { font-weight: 700; color: #b8380a; margin: 6px 0 4px; }
 .table-tile ul { list-style: none; font-size: 0.8rem; color: #495057; }
-.table-tile li { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.table-tile .t-free { color: #868e96; font-size: 0.85rem; margin-top: 6px; }
+.table-tile li { white-space: normal; overflow: hidden; text-overflow: ellipsis; overflow-wrap: anywhere; }
+.table-tile .t-free { color: #5c5f66; font-size: 0.85rem; margin-top: 6px; }
+
+/* รายละเอียดออเดอร์ของโต๊ะ */
+.table-open {
+    width: 100%; margin-top: 10px; padding: 8px 6px;
+    border: 1px solid #ced4da; border-radius: 8px;
+    background: #fff; color: #343a40; cursor: pointer; font: inherit; font-size: 0.8rem;
+}
+.table-open:hover { background: #f1f3f5; }
+.table-open:focus-visible, .table-dialog-close:focus-visible { outline: 3px solid #212529; outline-offset: 2px; }
+.table-dialog {
+    width: min(640px, calc(100vw - 24px)); max-height: calc(100dvh - 32px);
+    margin: auto; padding: 20px; border: none; border-radius: 14px;
+    background: #fff; color: #212529; box-shadow: 0 12px 48px rgba(0, 0, 0, 0.2);
+}
+.table-dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
+.table-dialog-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.table-dialog-head h2 { font-size: 1.1rem; }
+.table-dialog-close { padding: 8px 14px; border: 1px solid #ced4da; border-radius: 8px; background: #fff; color: #343a40; font: inherit; cursor: pointer; }
+.table-dialog-status { margin: 12px 0; font-size: 0.9rem; }
+.table-order-scroll { max-height: 55dvh; overflow: auto; }
+.table-order-list { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.table-order-list th, .table-order-list td { padding: 10px 8px; text-align: left; border-bottom: 1px solid #e9ecef; }
+.table-order-list th { background: #f8f9fa; }
+.table-order-list td:first-child { min-width: 110px; overflow-wrap: anywhere; }
+.table-order-list .num { text-align: right; white-space: nowrap; }
+.table-dialog-total { display: flex; justify-content: space-between; gap: 12px; margin-top: 16px; font-size: 1rem; }
+
+/* สถานะอาหารในครัว */
+.kitchen-badge { display: inline-block; font-size: 0.7rem; padding: 2px 6px; border-radius: 99px; margin: 2px 0; }
+.kitchen-select { min-width: 112px; padding: 7px 8px; border: 1px solid #ced4da; border-radius: 8px; font: inherit; font-size: 0.85rem; cursor: pointer; }
+.kitchen-badge.is-cooking, .kitchen-select.is-cooking { background: #fff3bf; color: #674d00; }
+.kitchen-badge.is-ready, .kitchen-select.is-ready { background: #d0ebff; color: #1864ab; }
+.kitchen-badge.is-served, .kitchen-select.is-served { background: #d3f9d8; color: #1f6b2d; }
+.kitchen-select:disabled { opacity: 1; cursor: wait; }
+.kitchen-select:focus-visible { outline: 3px solid #212529; outline-offset: 2px; }
+.kitchen-note { margin: 8px 0 12px; color: #5c5f66; font-size: 0.8rem; }
+.kitchen-error { background: #fff5f5; color: #a61e1e; border: 1px solid #ffc9c9; border-radius: 8px; padding: 10px; margin-bottom: 12px; }
 
 /* ตารางรายการเงินเข้า */
 .tx-wrap { overflow-x: auto; }
@@ -62,8 +103,8 @@
 .tx-table th { color: #5c5f66; font-weight: 600; font-size: 0.8rem; }
 .tx-table td.num, .tx-table th.num { text-align: right; }
 .badge { font-size: 0.75rem; padding: 2px 8px; border-radius: 99px; }
-.badge.closed { background: #d3f9d8; color: #2b8a3e; }
-.badge.partial { background: #fff3bf; color: #a05c00; }
+.badge.closed { background: #d3f9d8; color: #1f6b2d; }
+.badge.partial { background: #fff3bf; color: #674d00; }
 
 /* กราฟ */
 .chart-box { position: relative; height: 260px; }
@@ -72,12 +113,12 @@
 .stock-list { list-style: none; }
 .stock-row { display: grid; grid-template-columns: 28px 1fr auto; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid #f1f3f5; }
 .stock-row:last-child { border-bottom: none; }
-.rank { width: 28px; height: 28px; border-radius: 50%; background: #d9480f; color: #fff; font-weight: 700; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; }
+.rank { width: 28px; height: 28px; border-radius: 50%; background: #b8380a; color: #fff; font-weight: 700; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; }
 .stock-name { font-weight: 600; overflow-wrap: anywhere; }
 .stock-meta { font-size: 0.8rem; color: #5c5f66; }
 .stock-bar { height: 6px; background: #f1f3f5; border-radius: 99px; margin-top: 6px; overflow: hidden; }
 .stock-bar > span { display: block; height: 100%; background: #ffa94d; }
-.stock-row.is-off .stock-name { color: #868e96; text-decoration: line-through; }
+.stock-row.is-off .stock-name { color: #5c5f66; text-decoration: line-through; }
 
 .switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.85rem; user-select: none; }
 .switch input { position: absolute; opacity: 0; width: 0; height: 0; }
@@ -96,4 +137,28 @@ details.all-menu summary { cursor: pointer; color: #b8380a; font-weight: 600; pa
     .dash { padding: 14px 12px 40px; }
     .dash-grid { grid-template-columns: 1fr; }
     .metric-card .value { font-size: 1.7rem; }
+}
+
+/* เคลียร์โต๊ะหลังลูกค้าชำระครบและลุกออก */
+.table-reset {
+    width: 100%; margin-top: 8px; padding: 8px 6px;
+    border: 1px solid #1f6b2d; border-radius: 8px;
+    background: #ebfbee; color: #1f6b2d;
+    font: inherit; font-size: 0.8rem; cursor: pointer;
+}
+.table-reset:hover { background: #d3f9d8; }
+.table-reset:disabled { opacity: 1; cursor: wait; }
+.table-reset:focus-visible { outline: 3px solid #212529; outline-offset: 2px; }
+
+/* ข้อมูลกราฟสำหรับโปรแกรมอ่านหน้าจอ */
+.chart-data {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
 }
