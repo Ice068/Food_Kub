@@ -2,6 +2,12 @@
 
 {% block extra_head %}
 <style>
+    output.pending-banner,
+    output.fully-paid-banner,
+    output.remaining-banner {
+        display: block;
+    }
+
     .split-summary-box {
         background: #f8f9fa;
         border: 1px solid #dee2e6;
@@ -142,13 +148,13 @@
         </p>
 
         {% if not confirmed %}
-        <div class="pending-banner" role="status">
+        <output class="pending-banner">
             รายการนี้ยังอยู่ระหว่างรอยืนยันรับเงิน
             บิลยังไม่ถูกหักหรือปิด
             <br>
             หากชำระแล้ว กรุณาให้พนักงานตรวจสอบ
             และอย่าชำระรายการเดิมซ้ำ
-        </div>
+        </output>
 
         {% if result.qr_image %}
         <img
@@ -189,10 +195,10 @@
 
         {% if confirmed %}
             {% if is_fully_paid %}
-            <div class="fully-paid-banner" role="status">
+            <output class="fully-paid-banner">
                 🎉 ชำระเงินครบทุกรายการแล้ว
                 ระบบปิดบิลเรียบร้อย ขอบคุณครับ!
-            </div>
+            </output>
 
             <div class="result-actions">
                 <a
@@ -204,12 +210,12 @@
             </div>
 
             {% else %}
-            <div class="remaining-banner" role="status">
+            <output class="remaining-banner">
                 ℹ️ ยอดค้างชำระที่เหลือ:
                 <strong>
                     {{ "%.2f"|format(remaining_total) }} บาท
                 </strong>
-            </div>
+            </output>
 
             <div class="result-actions">
                 <a

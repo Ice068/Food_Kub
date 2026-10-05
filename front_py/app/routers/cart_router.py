@@ -201,7 +201,7 @@ class CartRouter:
             status_code=303,
         )
 
-    async def clear_cart(self, request: Request):
+    def clear_cart(self, request: Request):
         # ล้างเฉพาะรายการที่ยังไม่ได้ส่งครัว
         self.cart_service.clear(request)
 
