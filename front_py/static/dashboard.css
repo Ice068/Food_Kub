@@ -3,6 +3,7 @@
     max-width: 1280px;
     margin: 0 auto;
     padding: 20px 20px 48px;
+    color: #212529;
 }
 
 /* ---------- แถบเมนูลัด ---------- */
@@ -15,7 +16,7 @@
     align-items: center;
     gap: 8px;
     padding: 12px 20px;
-    background: #d9480f;
+    background: #b8380a;
     color: #fff;
 }
 
@@ -32,13 +33,13 @@
     text-decoration: none;
     padding: 8px 14px;
     border-radius: 8px;
-    background: rgba(255, 255, 255, 0.14);
+    background: #b8380a;
     font-size: 0.95rem;
 }
 
 .dash-nav a.nav-link:hover,
 .dash-nav a.nav-link.is-current {
-    background: rgba(255, 255, 255, 0.3);
+    background: #9c2e08;
 }
 
 .dash-nav .spacer {
@@ -138,7 +139,7 @@
 }
 
 .trend-up {
-    color: #2b8a3e;
+    color: #1f6b2d;
     font-weight: 600;
 }
 
@@ -191,7 +192,7 @@
 }
 
 .empty {
-    color: #868e96;
+    color: #5c5f66;
     padding: 18px 0;
     text-align: center;
 }
@@ -236,7 +237,7 @@
 
 .table-tile.is-free .t-state {
     background: #d3f9d8;
-    color: #2b8a3e;
+    color: #1f6b2d;
 }
 
 /* กำลังรับประทาน */
@@ -263,7 +264,7 @@
 
 .table-tile .t-total {
     font-weight: 700;
-    color: #d9480f;
+    color: #b8380a;
     margin: 6px 0 4px;
 }
 
@@ -279,7 +280,7 @@
 }
 
 .table-tile .t-free {
-    color: #868e96;
+    color: #5c5f66;
     font-size: 0.85rem;
     margin-top: 6px;
 }
@@ -313,10 +314,10 @@
     width: 100%;
     margin-top: 8px;
     padding: 8px 6px;
-    border: 1px solid #2b8a3e;
+    border: 1px solid #1f6b2d;
     border-radius: 8px;
     background: #ebfbee;
-    color: #2b8a3e;
+    color: #1f6b2d;
     font: inherit;
     font-size: 0.8rem;
     cursor: pointer;
@@ -327,7 +328,7 @@
 }
 
 .table-reset:disabled {
-    opacity: 0.65;
+    opacity: 1;
     cursor: wait;
 }
 
@@ -456,11 +457,11 @@
 .kitchen-badge.is-served,
 .kitchen-select.is-served {
     background: #d3f9d8;
-    color: #2b8a3e;
+    color: #1f6b2d;
 }
 
 .kitchen-select:disabled {
-    opacity: 0.65;
+    opacity: 1;
     cursor: wait;
 }
 
@@ -522,12 +523,12 @@
 
 .badge.closed {
     background: #d3f9d8;
-    color: #2b8a3e;
+    color: #1f6b2d;
 }
 
 .badge.partial {
     background: #fff3bf;
-    color: #a05c00;
+    color: #674d00;
 }
 
 /* ---------- กราฟ ---------- */
@@ -536,7 +537,7 @@
     height: 260px;
 }
 
-/* ---------- เมนูยอดนิยมและสวิตช์ของหมด ---------- */
+/* ---------- เมนูยอดนิยม ---------- */
 .stock-list {
     list-style: none;
 }
@@ -558,7 +559,7 @@
     width: 28px;
     height: 28px;
     border-radius: 50%;
-    background: #d9480f;
+    background: #b8380a;
     color: #fff;
     font-weight: 700;
     display: flex;
@@ -592,10 +593,11 @@
 }
 
 .stock-row.is-off .stock-name {
-    color: #868e96;
+    color: #5c5f66;
     text-decoration: line-through;
 }
 
+/* ---------- สวิตช์เปิด/ปิดขาย ---------- */
 .switch {
     display: inline-flex;
     align-items: center;

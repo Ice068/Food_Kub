@@ -50,14 +50,10 @@ class KitchenStatusPayload(BaseModel):
 
 
 class PaidTablePayload(BaseModel):
-    """รายการที่ชำระครบแล้ว ใช้ตรวจว่ามีออเดอร์ใหม่ค้างอยู่หรือไม่"""
-
     items: list[Line] = Field(..., min_length=1)
 
 
 class ResetTablePayload(BaseModel):
-    """ระบุบิลที่พนักงานกำลังเคลียร์ ป้องกันการเคลียร์ผิดบิล"""
-
     opened_at: str = Field(..., min_length=1)
 
 
@@ -109,7 +105,17 @@ async def set_live_order(
 
 # ---------- อัปเดตสถานะอาหาร ----------
 
-@router.put("/live-orders/{table}/items/{item_id}/kitchen-status")
+@router.put(
+    "/live-orders/{table}/items/{item_id}/kitchen-status",
+    responses={
+        404: {
+            "description": "Order item not found",
+        },
+        409: {
+            "description": "Table bill or order quantity has changed",
+        },
+    },
+)
 async def set_kitchen_status(
     table: int,
     item_id: int,
@@ -143,15 +149,19 @@ async def set_kitchen_status(
 
 # ---------- ชำระครบ รอพนักงานเคลียร์โต๊ะ ----------
 
-@router.post("/live-orders/{table}/paid")
+@router.post(
+    "/live-orders/{table}/paid",
+    responses={
+        409: {
+            "description": "New unpaid orders exist",
+        },
+    },
+)
 async def mark_table_paid(
     table: int,
     payload: PaidTablePayload,
 ):
-    """
-    เรียกหลังระบบยืนยันว่าชำระครบแล้วเท่านั้น
-    โต๊ะยังคงใช้งานอยู่จนพนักงานกด Reset
-    """
+    """เรียกหลังยืนยันว่าชำระครบแล้วเท่านั้น"""
     try:
         stats_service.mark_table_paid(
             table,
@@ -168,15 +178,24 @@ async def mark_table_paid(
 
 # ---------- Reset Table ----------
 
-@router.post("/live-orders/{table}/reset")
+@router.post(
+    "/live-orders/{table}/reset",
+    responses={
+        404: {
+            "description": "Table already free",
+        },
+        409: {
+            "description": (
+                "Table bill has changed or table is not fully paid"
+            ),
+        },
+    },
+)
 async def reset_table(
     table: int,
     payload: ResetTablePayload,
 ):
-    """
-    เคลียร์โต๊ะที่ชำระครบแล้ว หลังลูกค้าลุกออก
-    ไม่ลบประวัติยอดขายหรือการชำระเงิน
-    """
+    """เคลียร์โต๊ะที่ชำระครบแล้ว โดยเก็บประวัติยอดขายไว้"""
     try:
         reset = stats_service.reset_table(
             table,
@@ -209,7 +228,14 @@ async def get_dashboard():
 
 # ---------- เปิด/ปิดขายเมนู ----------
 
-@router.post("/availability/{item_id}")
+@router.post(
+    "/availability/{item_id}",
+    responses={
+        404: {
+            "description": "Menu item not found",
+        },
+    },
+)
 async def set_availability(
     item_id: int,
     payload: AvailabilityPayload,
