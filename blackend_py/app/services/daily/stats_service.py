@@ -3,8 +3,8 @@ from datetime import datetime, timedelta, timezone
 
 from google.cloud.firestore import transactional
 
-from app.core.config import settings
 from app.core.db import db
+from app.services.table_settings_service import TableSettingsService
 
 # เวลาไทย UTC+7
 TH_TZ = timezone(timedelta(hours=7))
@@ -391,7 +391,10 @@ class StatsService:
             "tables": {
                 # รวมโต๊ะชำระแล้วที่ยังรอพนักงานเคลียร์
                 "active": len(live),
-                "total": settings.TOTAL_TABLES,
+
+                # อ่านจำนวนโต๊ะที่บันทึกจากหน้า Admin
+                "total": TableSettingsService().get_count(),
+
                 "live": live,
             },
             "top_dish": top_dishes[0] if top_dishes else None,
@@ -546,8 +549,10 @@ class StatsService:
             "method": t.get("method"),
             "amount": t["amount"],
             "bill_closed": t.get("bill_closed", False),
+
             # ข้อมูลเก่าที่ไม่มี field นี้จะคืน None
             "payment_type": t.get("payment_type"),
+
             "created_at": t["created_at"],
             "item_count": sum(
                 i["qty"] for i in t.get("items", [])
