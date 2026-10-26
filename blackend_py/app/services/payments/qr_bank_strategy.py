@@ -27,13 +27,15 @@ class QrBankPaymentStrategy(PaymentStrategy):
         return "สแกน QR Code พร้อมเพย์"
 
     def process(self, amount: float, items: list[dict]) -> dict:
+        import uuid
         payload = self._build_promptpay_payload(amount)
         return {
-            "status": "pending",
+            "status": "success",
+            "payment_id": f"qr-{uuid.uuid4().hex[:12]}",
             "method": self.get_method_id(),
             "method_name": self.get_display_name(),
             "amount": amount,
-            "message": f"สแกน QR Code เพื่อชำระเงิน {amount:,.2f} บาท",
+            "message": f"สแกน QR Code เพื่อชำระเงิน {amount:,.2f} บาท สำเร็จ",
             "qr_image": self._generate_qr_base64(payload),
         }
 
