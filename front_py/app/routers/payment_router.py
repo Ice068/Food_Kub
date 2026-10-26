@@ -1148,12 +1148,12 @@ class PaymentRouter:
         return await self.stats_service.sync_live_order(
             table,
             items,
-            status="dining",
+            status="waiting_payment",
             shared_paid=self.cart_service.get_shared_paid(
                 request
             ),
             expected_opened_at=live.get("opened_at"),
-            expected_updated_at=live.get("updated_at"),
+            expected_updated_at=None,
         )
 
     # ---------- บันทึกสถิติหลังยืนยันชำระ ----------

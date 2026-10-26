@@ -217,6 +217,7 @@ class StatsService:
     ):
         if (
             previous
+            and expected_opened_at is not None
             and previous.get("opened_at") != expected_opened_at
         ):
             raise ValueError(TABLE_BILL_CHANGED)
@@ -226,6 +227,7 @@ class StatsService:
 
         if (
             previous
+            and expected_updated_at is not None
             and previous.get("updated_at") != expected_updated_at
         ):
             raise ValueError(
@@ -235,6 +237,7 @@ class StatsService:
         if (
             previous.get("status") == "waiting_payment"
             and status == "dining"
+            and not (float(previous.get("shared_paid", 0) or 0) > 0)
         ):
             raise ValueError("Table is waiting for payment")
 
@@ -447,6 +450,8 @@ class StatsService:
             payment.expected_total,
         )
 
+        is_split = bool(float(data.get("shared_paid", 0) or 0) > 0)
+
         return self._record_full_payment(
             transaction,
             ref,
@@ -455,6 +460,7 @@ class StatsService:
             items,
             amount,
             now,
+            is_split=is_split,
         )
 
     def _validate_payment_items(
@@ -511,6 +517,7 @@ class StatsService:
         items,
         amount,
         now,
+        is_split: bool = False,
     ):
         receipt = {
             "table": payment.table,
@@ -521,7 +528,7 @@ class StatsService:
                 for item in items
             ],
             "bill_closed": True,
-            "payment_type": "full",
+            "payment_type": "split" if is_split else "full",
             "confirmed_by": "admin",
             "created_at": now.isoformat(),
             "date": _day(now),
@@ -696,7 +703,7 @@ class StatsService:
         )
 
         top_dishes = self._top_dishes(today, limit=5)
-        live = self._live_tables()
+        live = self._live_tables(today_tx)
 
         return {
             "generated_at": now.isoformat(),
@@ -813,7 +820,10 @@ class StatsService:
 
     # ---------- โต๊ะที่กำลังใช้งาน ----------
 
-    def _live_tables(self) -> list[dict]:
+    def _live_tables(
+        self,
+        today_tx: list[dict] | None = None,
+    ) -> list[dict]:
         tables = []
 
         for doc in self.db.collection(self.live_orders).stream():
@@ -844,6 +854,20 @@ class StatsService:
                 data.get("shared_paid", 0)
             )
 
+            paid_amount = 0.0
+            if today_tx and data.get("table") and data.get("opened_at"):
+                t_num = data.get("table")
+                t_opened = data.get("opened_at")
+                paid_amount = round(
+                    sum(
+                        tx["amount"]
+                        for tx in today_tx
+                        if tx.get("table") == t_num
+                        and tx.get("created_at", "") >= t_opened
+                    ),
+                    2,
+                )
+
             tables.append({
                 "table": data.get("table"),
                 "status": data.get("status", "dining"),
@@ -858,6 +882,7 @@ class StatsService:
                     for item in items
                 ),
                 "shared_paid": shared_paid,
+                "paid_amount": paid_amount,
                 "opened_at": data.get("opened_at"),
             })
 
