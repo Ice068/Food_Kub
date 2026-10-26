@@ -1,19 +1,24 @@
 from typing import Literal
 
 import secrets
-from fastapi import APIRouter, HTTPException, Header, Depends
-from app.core.admin_auth import admin_api_key
+
+from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from app.services.menu_service import MenuService
+from app.core.admin_auth import admin_api_key
 from app.services.daily.stats_service import StatsService
+from app.services.menu_service import MenuService
+
 
 router = APIRouter(prefix="/api/stats", tags=["Stats"])
 
 _admin_key = admin_api_key(create=True)
 
 
-async def require_internal_admin(x_food_kub_key: str = Header("")):
+async def require_internal_admin(
+    x_food_kub_key: str = Header(""),
+):
     if not secrets.compare_digest(x_food_kub_key, _admin_key):
         raise HTTPException(
             status_code=401,
@@ -46,7 +51,7 @@ class TransactionPayload(BaseModel):
     items: list[Line]
     bill_closed: bool
 
-    # full = บิลรวม, split = แยกจ่ายรายคน
+    # รูปแบบการชำระ: ทั้งบิลหรือแยกจ่ายรายคน
     payment_type: Literal["full", "split"] | None = None
 
 
@@ -80,7 +85,11 @@ class AdminTablePaymentPayload(BaseModel):
     opened_at: str = Field(..., min_length=1)
     items: list[Line] = Field(..., min_length=1)
     method: Literal["cash", "qr_bank"] | None = None
-    expected_total: float = Field(..., gt=0, allow_inf_nan=False)
+    expected_total: float = Field(
+        ...,
+        gt=0,
+        allow_inf_nan=False,
+    )
 
 
 # ---------- บันทึกออเดอร์ ----------
@@ -134,6 +143,14 @@ async def get_live_table(table: int):
 @router.put(
     "/live-orders/{table}",
     dependencies=[Depends(require_internal_admin)],
+    responses={
+        401: {
+            "description": "Internal admin authentication required",
+        },
+        409: {
+            "description": "Table bill or order state has changed",
+        },
+    },
 )
 async def set_live_order(
     table: int,
@@ -148,6 +165,7 @@ async def set_live_order(
             payload.expected_opened_at,
             payload.expected_updated_at,
         )
+
     except ValueError as exc:
         raise HTTPException(
             status_code=409,
@@ -184,6 +202,7 @@ async def set_kitchen_status(
             payload.expected_qty,
             payload.opened_at,
         )
+
     except ValueError as exc:
         raise HTTPException(
             status_code=409,
@@ -207,6 +226,17 @@ async def set_kitchen_status(
 @router.post(
     "/live-orders/{table}/request-payment",
     dependencies=[Depends(require_internal_admin)],
+    responses={
+        401: {
+            "description": "Internal admin authentication required",
+        },
+        404: {
+            "description": "Table not found",
+        },
+        409: {
+            "description": "Table bill or payment state has changed",
+        },
+    },
 )
 async def request_table_payment(
     table: int,
@@ -224,6 +254,17 @@ async def request_table_payment(
 @router.post(
     "/live-orders/{table}/confirm-payment",
     dependencies=[Depends(require_internal_admin)],
+    responses={
+        401: {
+            "description": "Internal admin authentication required",
+        },
+        404: {
+            "description": "Table not found",
+        },
+        409: {
+            "description": "Table bill or payment state has changed",
+        },
+    },
 )
 async def confirm_table_payment(
     table: int,
@@ -250,16 +291,18 @@ def _update_table_payment(
             payload.method,
             payload.expected_total,
         )
+
     except LookupError as exc:
-        raise HTTPException(
+        return JSONResponse(
             status_code=404,
-            detail=str(exc),
-        ) from exc
+            content={"detail": str(exc)},
+        )
+
     except ValueError as exc:
-        raise HTTPException(
+        return JSONResponse(
             status_code=409,
-            detail=str(exc),
-        ) from exc
+            content={"detail": str(exc)},
+        )
 
 
 # ---------- ชำระครบ รอพนักงานเคลียร์โต๊ะ ----------
@@ -283,6 +326,7 @@ async def mark_table_paid(
             table,
             [item.model_dump() for item in payload.items],
         )
+
     except ValueError as exc:
         raise HTTPException(
             status_code=409,
@@ -312,12 +356,13 @@ async def reset_table(
     table: int,
     payload: ResetTablePayload,
 ):
-    """เคลียร์โต๊ะที่ชำระครบแล้ว โดยเก็บประวัติยอดขายไว้"""
+    """เคลียร์โต๊ะที่ชำระครบ โดยเก็บประวัติยอดขายไว้"""
     try:
         reset = stats_service.reset_table(
             table,
             payload.opened_at,
         )
+
     except ValueError as exc:
         raise HTTPException(
             status_code=409,

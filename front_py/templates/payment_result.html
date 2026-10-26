@@ -1,13 +1,6 @@
 {% extends "base.html" %}
 
 {% block extra_head %}
-{% if not payment_confirmed|default(false) and table_id|default(none) %}
-<meta
-    http-equiv="refresh"
-    content="10;url=/checkout?table={{ table_id }}"
->
-{% endif %}
-
 <style>
     output.pending-banner,
     output.fully-paid-banner,
@@ -97,7 +90,6 @@
         line-height: 1.6;
     }
 
-    /* หน้าต่างชำระสำเร็จ */
     .payment-success-dialog {
         position: fixed;
         inset: 0;
@@ -188,9 +180,9 @@
     {% else %}
     <div class="result-card">
         {% if confirmed %}
-            <h2>✅ ยืนยันการชำระเงินแล้ว</h2>
+        <h2>✅ ยืนยันการชำระเงินแล้ว</h2>
         {% else %}
-            <h2>⏳ รอยืนยันการชำระเงิน</h2>
+        <h2>⏳ รอยืนยันการชำระเงิน</h2>
         {% endif %}
 
         <p>
@@ -336,7 +328,7 @@
     {% endif %}
 </div>
 
-<!-- แสดงเฉพาะเมื่อยืนยันว่าชำระครบแล้ว -->
+<!-- หน้าต่างแจ้งชำระสำเร็จ -->
 {% if confirmed and is_fully_paid|default(false) and not error|default(false) %}
 <dialog
     id="payment-success-dialog"
@@ -386,7 +378,6 @@
 
     if (!dialog || !closeLink) return;
 
-    // กด Escape ปิดหน้าต่างแล้วกลับหน้าเมนู
     dialog.addEventListener("close", () => {
         window.location.replace(closeLink.href);
     });
@@ -396,6 +387,109 @@
     } else {
         dialog.setAttribute("open", "");
     }
+})();
+</script>
+{% endif %}
+
+<!-- ตรวจสถานะเบื้องหลัง แทน meta refresh -->
+{% if not confirmed and table_id|default(none) %}
+<p
+    id="payment-status-live"
+    role="status"
+    aria-live="polite"
+    style="text-align:center; margin:12px 0;"
+>
+    กำลังรอพนักงานยืนยันรับเงิน
+</p>
+
+<script>
+(() => {
+    const statusUrl = {{ ("/checkout/status?table=" ~ table_id)|tojson }};
+    const checkoutUrl = {{ ("/checkout?table=" ~ table_id)|tojson }};
+
+    const message = document.getElementById(
+        "payment-status-live"
+    );
+
+    let stopped = false;
+    let inFlight = false;
+    let timer;
+    let activeRequest;
+
+    async function checkPayment() {
+        if (stopped || inFlight) return;
+
+        inFlight = true;
+        activeRequest = new AbortController();
+
+        const timeout = setTimeout(
+            () => activeRequest.abort(),
+            8000
+        );
+
+        try {
+            const response = await fetch(statusUrl, {
+                cache: "no-store",
+                credentials: "same-origin",
+                signal: activeRequest.signal
+            });
+
+            if (!response.ok) {
+                throw new Error("Status unavailable");
+            }
+
+            const data = await response.json();
+
+            if (stopped) return;
+
+            if (data.payment_confirmed === true) {
+                stopped = true;
+
+                message.textContent = (
+                    "ยืนยันรับเงินแล้ว กำลังแสดงผลการชำระ"
+                );
+
+                window.location.replace(checkoutUrl);
+                return;
+            }
+
+            message.textContent = (
+                "กำลังรอพนักงานยืนยันรับเงิน"
+            );
+        } catch {
+            if (!stopped) {
+                message.textContent = (
+                    "ยังตรวจสอบสถานะไม่ได้ กำลังลองใหม่ " +
+                    "กรุณาอย่าจ่ายซ้ำ"
+                );
+            }
+        } finally {
+            inFlight = false;
+            clearTimeout(timeout);
+
+            if (!stopped) {
+                timer = setTimeout(
+                    checkPayment,
+                    5000
+                );
+            }
+        }
+    }
+
+    window.addEventListener("pagehide", () => {
+        stopped = true;
+        clearTimeout(timer);
+        activeRequest?.abort();
+    });
+
+    window.addEventListener("pageshow", (event) => {
+        if (event.persisted && stopped) {
+            stopped = false;
+            checkPayment();
+        }
+    });
+
+    checkPayment();
 })();
 </script>
 {% endif %}
