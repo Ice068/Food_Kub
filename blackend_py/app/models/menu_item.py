@@ -1,5 +1,3 @@
-from matplotlib.style import available
-
 
 class MenuItem:
     """โมเดลเก็บข้อมูลเมนูอาหาร"""
