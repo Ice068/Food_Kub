@@ -1148,7 +1148,7 @@ class PaymentRouter:
         return await self.stats_service.sync_live_order(
             table,
             items,
-            status="waiting_payment",
+            status="dining",
             shared_paid=self.cart_service.get_shared_paid(
                 request
             ),

@@ -458,7 +458,11 @@
         }
 
         if (table.status === "waiting_payment") {
-            return "รอชำระ";
+            return (table.shared_paid || 0) > 0 ? "รอชำระส่วนที่เหลือ" : "รอชำระ";
+        }
+
+        if ((table.shared_paid || 0) > 0) {
+            return "กำลังทาน • แยกจ่ายบางส่วนแล้ว";
         }
 
         return "กำลังรับประทาน";
@@ -476,6 +480,10 @@
         );
 
         if (table.status !== "waiting_payment") {
+            const partialNote = (table.shared_paid || 0) > 0
+                ? `<small style="display:block;margin-top:6px;color:#2b8a3e;font-size:0.75rem;line-height:1.3;">(จ่ายแล้ว ${money(table.shared_paid)} • ลูกค้ากำลังแยกชำระ)</small>`
+                : "";
+
             return `
                 <button
                     type="button"
@@ -486,8 +494,17 @@
                 >
                     เรียกชำระเงิน
                 </button>
+                ${partialNote}
             `;
         }
+
+        const isPartial = (table.shared_paid || 0) > 0;
+        const btnText = isPartial
+            ? `ปิดบิลโต๊ะส่วนที่เหลือ ${money(table.total)}`
+            : `ยืนยันรับเงินครบ ${money(table.total)}`;
+        const noteText = isPartial
+            ? `⚠️ มีรายการแยกจ่ายแล้ว ${money(table.shared_paid)} • กดยืนยันเมื่อต้องการปิดบิลโต๊ะทั้งหมด`
+            : `ตรวจเงินสดหรือยอดเข้าบัญชีจริงก่อนยืนยัน`;
 
         return `
             <label class="payment-method-label">
@@ -519,11 +536,11 @@
                 data-table="${number}"
                 ${busy}
             >
-                ${(table.shared_paid || 0) > 0 ? `ยืนยันรับเงินส่วนที่เหลือ ${money(table.total)}` : `ยืนยันรับเงินครบ ${money(table.total)}`}
+                ${btnText}
             </button>
 
             <small>
-                ${(table.shared_paid || 0) > 0 ? `(มีรายการแยกจ่ายแล้ว ${money(table.shared_paid)} • ยืนยันปิดบิลส่วนที่เหลือ)` : `ตรวจเงินสดหรือยอดเข้าบัญชีจริงก่อนยืนยัน`}
+                ${noteText}
             </small>
         `;
     }
@@ -839,17 +856,16 @@
                 return;
             }
 
-            if (action === "confirm-payment") {
-                const methodLabel = method === "cash"
-                    ? "เงินสด"
-                    : "เงินเข้าบัญชี";
+                const isPartial = (table.shared_paid || 0) > 0;
+                const msg = isPartial
+                    ? `⚠️ ยืนยันปิดบิลโต๊ะ ${number} ทั้งหมด?\n\n` +
+                      `• โต๊ะนี้มีรายการแยกจ่ายไปแล้ว: ${money(table.shared_paid)}\n` +
+                      `• ยอดคงเหลือที่ต้องชำระ: ${money(table.total)}\n\n` +
+                      `กดตกลงเพื่อรับ${methodLabel} และ "ปิดบิลโต๊ะส่วนที่เหลือทั้งหมด"\n` +
+                      `(หมายเหตุ: หากลูกค้าท่านอื่นในโต๊ะยังแยกจ่ายไม่ครบ อย่าเพิ่งกดยืนยันปุ่มนี้)`
+                    : `ตรวจสอบว่าได้รับ${methodLabel}ครบ ${money(table.total)} สำหรับโต๊ะ ${number} แล้วใช่ไหม? ยืนยันแล้วจะบันทึกยอดขายและปิดบิล`;
 
-                const confirmed = confirm(
-                    `ตรวจสอบว่าได้รับ${methodLabel}ครบ ` +
-                    `${money(table.total)} ` +
-                    `สำหรับโต๊ะ ${number} แล้วใช่ไหม? ` +
-                    "ยืนยันแล้วจะบันทึกยอดขายและปิดบิล"
-                );
+                const confirmed = confirm(msg);
 
                 if (!confirmed) return;
             }
