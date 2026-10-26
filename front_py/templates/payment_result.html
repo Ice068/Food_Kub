@@ -1,6 +1,13 @@
 {% extends "base.html" %}
 
 {% block extra_head %}
+{% if not payment_confirmed|default(false) and table_id|default(none) %}
+<meta
+    http-equiv="refresh"
+    content="10;url=/checkout?table={{ table_id }}"
+>
+{% endif %}
+
 <style>
     output.pending-banner,
     output.fully-paid-banner,
@@ -99,6 +106,7 @@
     {% if error %}
     <div class="result-card result-error">
         <h2>⚠️ ตรวจสอบรายการชำระเงิน</h2>
+
         <p>{{ error }}</p>
 
         <div class="result-actions">
@@ -121,9 +129,9 @@
     {% else %}
     <div class="result-card">
         {% if confirmed %}
-            <h2>✅ ยืนยันการชำระเงินแล้ว</h2>
+        <h2>✅ ยืนยันการชำระเงินแล้ว</h2>
         {% else %}
-            <h2>⏳ รอยืนยันการชำระเงิน</h2>
+        <h2>⏳ รอยืนยันการชำระเงิน</h2>
         {% endif %}
 
         <p>
@@ -151,7 +159,9 @@
         <output class="pending-banner">
             รายการนี้ยังอยู่ระหว่างรอยืนยันรับเงิน
             บิลยังไม่ถูกหักหรือปิด
+
             <br>
+
             หากชำระแล้ว กรุณาให้พนักงานตรวจสอบ
             และอย่าชำระรายการเดิมซ้ำ
         </output>
@@ -212,6 +222,7 @@
             {% else %}
             <output class="remaining-banner">
                 ℹ️ ยอดค้างชำระที่เหลือ:
+
                 <strong>
                     {{ "%.2f"|format(remaining_total) }} บาท
                 </strong>
@@ -238,9 +249,11 @@
         {% else %}
         <div class="remaining-banner">
             ยอดค้างชำระของบิลยังคงเป็น
+
             <strong>
                 {{ "%.2f"|format(remaining_total) }} บาท
             </strong>
+
             จนกว่าจะยืนยันรับเงิน
         </div>
 

@@ -1,20 +1,16 @@
-import logging
-
 import httpx
-from fastapi import APIRouter, Depends, Request, Form
-from fastapi.responses import RedirectResponse
+
+from fastapi import APIRouter, Depends, Form, Request
+from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app.core.table_context import set_table_context, table_query
-from app.services.template_service import TemplateService
 from app.services.cart_service import CartService
 from app.services.menu_service import MenuService
 from app.services.stats_service import StatsService, build_lines
-
-logger = logging.getLogger(__name__)
+from app.services.template_service import TemplateService
 
 
 class CartRouter:
-
     def __init__(
         self,
         cart_service: CartService,
@@ -35,25 +31,42 @@ class CartRouter:
 
     def _register_routes(self):
         self.router.add_api_route(
-            "/cart", self.show_cart, methods=["GET"]
+            "/cart",
+            self.show_cart,
+            methods=["GET"],
         )
+
         self.router.add_api_route(
-            "/cart/add/{item_id}", self.add_to_cart, methods=["POST"]
+            "/cart/add/{item_id}",
+            self.add_to_cart,
+            methods=["POST"],
         )
+
         self.router.add_api_route(
-            "/cart/update/{item_id}", self.update_cart, methods=["POST"]
+            "/cart/update/{item_id}",
+            self.update_cart,
+            methods=["POST"],
         )
+
         self.router.add_api_route(
-            "/cart/remove/{item_id}", self.remove_item, methods=["POST"]
+            "/cart/remove/{item_id}",
+            self.remove_item,
+            methods=["POST"],
         )
+
         self.router.add_api_route(
-            "/cart/clear", self.clear_cart, methods=["POST"]
+            "/cart/clear",
+            self.clear_cart,
+            methods=["POST"],
         )
+
         self.router.add_api_route(
             "/cart/send-to-kitchen",
             self.send_to_kitchen,
             methods=["POST"],
         )
+
+    # ---------- หน้าตะกร้า ----------
 
     async def show_cart(
         self,
@@ -65,10 +78,13 @@ class CartRouter:
         total = 0.0
 
         for item_id, qty in cart.items():
-            menu_item = await self.menu_service.get_by_id(int(item_id))
+            menu_item = await self.menu_service.get_by_id(
+                int(item_id)
+            )
 
             if menu_item:
                 total += menu_item.price * qty
+
                 cart_items.append({
                     "id": menu_item.id,
                     "name": menu_item.name,
@@ -76,15 +92,21 @@ class CartRouter:
                     "qty": qty,
                 })
 
-        active_orders = self.cart_service.get_active_orders(request)
+        active_orders = self.cart_service.get_active_orders(
+            request
+        )
+
         kitchen_items = []
         kitchen_total = 0.0
 
         for item_id, qty in active_orders.items():
-            menu_item = await self.menu_service.get_by_id(int(item_id))
+            menu_item = await self.menu_service.get_by_id(
+                int(item_id)
+            )
 
             if menu_item:
                 kitchen_total += menu_item.price * qty
+
                 kitchen_items.append({
                     "id": menu_item.id,
                     "name": menu_item.name,
@@ -102,14 +124,21 @@ class CartRouter:
                 "kitchen_items": kitchen_items,
                 "kitchen_total": kitchen_total,
                 "ordered": ordered == 1,
-                "cart_count": self.cart_service.total_count(request),
-                "bill_count": self.cart_service.bill_total_count(request),
+                "cart_count": self.cart_service.total_count(
+                    request
+                ),
+                "bill_count": self.cart_service.bill_total_count(
+                    request
+                ),
             },
         )
 
+    # ---------- ส่งอาหารเข้าครัว ----------
+
     async def send_to_kitchen(self, request: Request):
-        # เก็บเฉพาะรายการรอบนี้ก่อนตะกร้าถูกล้าง
-        new_quantities = dict(self.cart_service.get_cart(request))
+        new_quantities = dict(
+            self.cart_service.get_cart(request)
+        )
 
         if not new_quantities:
             return RedirectResponse(
@@ -117,39 +146,61 @@ class CartRouter:
                 status_code=303,
             )
 
-        self.cart_service.send_cart_to_kitchen(request)
-
-        # รายการสะสมหลังส่งครัว รวมออเดอร์รอบก่อนด้วย
         active_quantities = dict(
             self.cart_service.get_active_orders(request)
         )
+
+        for key, qty in new_quantities.items():
+            active_quantities[key] = (
+                active_quantities.get(key, 0) + qty
+            )
+
         table_id = getattr(request.state, "table_id", None)
 
-        # StatsService จัดการ HTTP error ตอนเขียนข้อมูลเอง
-        # ส่วนนี้รองรับ HTTP error ตอนดึงชื่อและราคาเมนู
         try:
-            new_items = await build_lines(
-                self.menu_service,
-                new_quantities,
-            )
-            await self.stats_service.record_order(
-                table_id,
-                new_items,
-            )
-
             if table_id is not None:
                 active_items = await build_lines(
                     self.menu_service,
                     active_quantities,
                 )
-                await self.stats_service.sync_live_order(
+
+                live = (
+                    getattr(request.state, "live_table", None)
+                    or {}
+                )
+
+                synced = await self.stats_service.sync_live_order(
                     table_id,
                     active_items,
                     status="dining",
+                    expected_opened_at=live.get("opened_at"),
+                    expected_updated_at=live.get("updated_at"),
                 )
+
+                if not synced:
+                    return HTMLResponse(
+                        "บิลเปลี่ยนหรือส่งครัวไม่สำเร็จ "
+                        "กรุณากลับไปโหลดตะกร้าใหม่",
+                        status_code=409,
+                    )
+
+            # ล้างตะกร้าเมื่อบันทึกบิลสำเร็จแล้ว
+            self.cart_service.send_cart_to_kitchen(request)
+
+            new_items = await build_lines(
+                self.menu_service,
+                new_quantities,
+            )
+
+            await self.stats_service.record_order(
+                table_id,
+                new_items,
+            )
+
         except httpx.HTTPError:
-            logger.exception(
-                "ส่งครัวแล้ว แต่ดึงข้อมูลเมนูเพื่อบันทึกสถิติไม่สำเร็จ"
+            return HTMLResponse(
+                "ติดต่อ Backend ไม่ได้ กรุณาลองใหม่",
+                status_code=503,
             )
 
         t_query = table_query(request)
@@ -159,6 +210,8 @@ class CartRouter:
             url=f"/cart{t_query}{delim}ordered=1",
             status_code=303,
         )
+
+    # ---------- เพิ่มอาหาร ----------
 
     async def add_to_cart(
         self,
@@ -171,6 +224,8 @@ class CartRouter:
             url=f"/cart{table_query(request)}",
             status_code=303,
         )
+
+    # ---------- แก้จำนวน ----------
 
     async def update_cart(
         self,
@@ -189,6 +244,8 @@ class CartRouter:
             status_code=303,
         )
 
+    # ---------- ลบอาหาร ----------
+
     async def remove_item(
         self,
         request: Request,
@@ -201,8 +258,9 @@ class CartRouter:
             status_code=303,
         )
 
+    # ---------- ล้างเฉพาะตะกร้าที่ยังไม่ส่งครัว ----------
+
     def clear_cart(self, request: Request):
-        # ล้างเฉพาะรายการที่ยังไม่ได้ส่งครัว
         self.cart_service.clear(request)
 
         return RedirectResponse(
