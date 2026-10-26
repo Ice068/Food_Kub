@@ -453,6 +453,27 @@ class TableQrTests(unittest.TestCase):
         # ยอดคงเหลือที่ต้องจ่ายจริงของโต๊ะคือ 60.00 บาท (ข้าวผัด 50 + น้ำ 20 - ของกลางจ่ายแล้ว 10)
         self.assertIn("60.00", checkout_resp.text)
 
+    def test_split_bill_custom_shared_item_selection(self):
+        import json
+        # โต๊ะ 11 สั่งข้าวผัด 2 จาน (จานละ 50 = 100) และน้ำเปล่า 1 ขวด (20) รวม 120 บาท
+        self.client.post("/cart/add/1?table=11")
+        self.client.post("/cart/update/1?table=11", data={"quantity": 2})
+        self.client.post("/cart/add/2?table=11")
+
+        # เลือกว่าจะให้ "ข้าวผัด" (item id 1) เป็นของกลาง แทนที่จะล็อกเฉพาะเครื่องดื่ม
+        # คนแรกจ่าย: น้ำเปล่าส่วนตัว 1 ขวด (20.-) + แชร์ข้าวผัดของกลาง 50.- = รวม 70.-
+        response = self.pay(11, **{
+            "split_mode": "split",
+            "selected_items": json.dumps({"2": 1}),
+            "shared_amount": "50.0",
+            "shared_note": "แชร์ข้าวผัดจานกลาง",
+            "shared_item_ids": json.dumps([1]),
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("70.00", response.text)
+        # ตรวจสอบว่าเหลือยอดค้างชำระของโต๊ะ 50.00 บาท
+        self.assertIn("50.00", response.text)
+
 
 if __name__ == "__main__":
     unittest.main()

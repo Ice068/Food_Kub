@@ -252,9 +252,16 @@
         padding: 4px 10px;
         border-radius: 6px;
         font-size: 0.8rem;
+        cursor: pointer;
         display: inline-flex;
         align-items: center;
         gap: 4px;
+        transition: all 0.15s ease;
+    }
+
+    .btn-toggle-shared:hover {
+        background: #e9ecef;
+        border-color: #adb5bd;
     }
 
     .btn-toggle-shared.is-shared {
@@ -262,6 +269,11 @@
         border-color: #20c997;
         color: #0ca678;
         font-weight: 600;
+    }
+
+    .btn-toggle-shared.is-shared:hover {
+        background: #d3f9d8;
+        border-color: #38d9a9;
     }
 
     .split-item-card.is-shared-item {
@@ -390,13 +402,12 @@
         <div class="split-guide">
             💡 <strong>วิธีแยกจ่าย:</strong>
             <br>• ติ๊กเลือกอาหารส่วนตัวที่ต้องการชำระ
-            <br>• รายการของกลางกำหนดโดยร้าน
-            สามารถเลือกจำนวนคนที่หาร และรวมส่วนแบ่งในบิลนี้ได้
+            <br>• หรือกดปุ่ม <strong>➗ ตั้งเป็นของกลาง</strong> ที่เมนูใดก็ได้ เพื่อนำไปหารเฉลี่ยร่วมกับเพื่อนในโต๊ะ
         </div>
 
         <h3>
             1. รายการอาหารของโต๊ะ
-            • เลือกจานส่วนตัวที่ต้องการชำระ
+            • เลือกจานส่วนตัวที่ต้องการชำระ หรือตั้งเป็นของกลาง
         </h3>
 
         <div class="split-items-list" id="split-items-container">
@@ -425,10 +436,10 @@
                                 type="button"
                                 class="btn-toggle-shared"
                                 id="btn-shared-{{ item.id }}"
-                                disabled
-                                title="รายการของกลางกำหนดโดยร้าน"
+                                onclick="toggleItemShared({{ item.id }})"
+                                title="คลิกเพื่อตั้งเป็นของกลาง หรือสลับกลับเป็นรายการส่วนตัว"
                             >
-                                รายการส่วนตัว
+                                ➗ ตั้งเป็นของกลาง
                             </button>
                         </div>
 
@@ -671,8 +682,19 @@
     let peopleCount = 2;
     let submitting = false;
 
-    // ใช้รายการของกลางที่เซิร์ฟเวอร์กำหนด
+    // ใช้รายการของกลางเริ่มต้น (ที่บันทึกไว้ หรือค่าแนะนำ)
     const sharedItemIds = new Set(serverSharedItemIds);
+
+    function toggleItemShared(itemId) {
+        if (sharedItemIds.has(itemId)) {
+            sharedItemIds.delete(itemId);
+        } else {
+            sharedItemIds.add(itemId);
+        }
+        updateSharedButtons();
+        initSharedItems();
+        recalculateSplit();
+    }
 
     function updateSharedButtons() {
         allCartItems.forEach(item => {
@@ -686,17 +708,18 @@
             const isShared = sharedItemIds.has(item.id);
 
             if (btn) {
-                btn.disabled = true;
-                btn.removeAttribute("onclick");
-                btn.title = "รายการของกลางกำหนดโดยร้าน";
+                btn.disabled = false;
+                btn.onclick = () => toggleItemShared(item.id);
 
-                btn.className = isShared
-                    ? "btn-toggle-shared is-shared"
-                    : "btn-toggle-shared";
-
-                btn.textContent = isShared
-                    ? "✅ เป็นของกลางแล้ว"
-                    : "รายการส่วนตัว";
+                if (isShared) {
+                    btn.className = "btn-toggle-shared is-shared";
+                    btn.textContent = "✅ เป็นของกลางแล้ว";
+                    btn.title = "คลิกเพื่อสลับกลับเป็นรายการส่วนตัว";
+                } else {
+                    btn.className = "btn-toggle-shared";
+                    btn.textContent = "➗ ตั้งเป็นของกลาง";
+                    btn.title = "คลิกเพื่อตั้งรายการนี้เป็นของกลาง";
+                }
             }
 
             if (card) {
@@ -736,10 +759,13 @@
 
             const tag = document.createElement("span");
             tag.className = "shared-mini-tag";
+            tag.style.cursor = "pointer";
+            tag.title = "คลิกเพื่อยกเลิกการตั้งเป็นของกลาง";
 
-            // ชื่อเมนูเป็นข้อความ ไม่ตีความเป็น HTML
+            // ชื่อเมนูเป็นข้อความ ไม่ตีความเป็น HTML พร้อมไอคอน ✕
             tag.textContent =
-                `🧊 ${item.name} x${item.qty} • ${cost.toFixed(2)} ฿`;
+                `🧊 ${item.name} x${item.qty} • ${cost.toFixed(2)} ฿ ✕`;
+            tag.onclick = () => toggleItemShared(item.id);
 
             container.appendChild(tag);
         });
@@ -757,7 +783,7 @@
                 : `รวมของกลาง: ${sharedTotal.toFixed(2)} บาท`;
         } else {
             badge.textContent = "ยังไม่มีของกลาง";
-            container.textContent = "ไม่มีรายการของกลางในบิลนี้";
+            container.textContent = "ยังไม่มีรายการของกลาง (กดปุ่ม ➗ ตั้งเป็นของกลาง ที่รายการด้านบนเพื่อเพิ่ม)";
         }
     }
 

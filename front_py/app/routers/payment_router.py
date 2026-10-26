@@ -721,7 +721,7 @@ class PaymentRouter:
         is_split = submitted.split_mode == "split"
 
         if is_split:
-            deducted, pay_items, amount = self._split_payment(
+            deducted, pay_items, amount, active_shared = self._split_payment(
                 items,
                 total,
                 shared_ids,
@@ -742,12 +742,13 @@ class PaymentRouter:
             )
 
             amount = total
+            active_shared = shared_ids
 
         return PaymentPlan(
             method=submitted.method,
             items=items,
             total=total,
-            shared_ids=shared_ids,
+            shared_ids=active_shared,
             shared=shared,
             is_split=is_split,
             deducted=deducted,
@@ -831,25 +832,36 @@ class PaymentRouter:
         shared_paid,
         selection,
     ):
-        if (
-            selection.shared > 0
-            and selection.shared_ids != shared_ids
-        ):
+        bill_item_ids = {item["id"] for item in items}
+
+        # ลูกค้าสามารถเลือกรายการใดในบิลเป็นของกลางก็ได้
+        if selection.shared_ids and not selection.shared_ids.issubset(bill_item_ids):
             raise ValueError(
-                "รายการของกลางไม่ตรงกับบิล "
-                "กรุณาเปิดหน้าชำระเงินใหม่"
+                "รายการของกลางไม่ถูกต้องหรือไม่อยู่ในบิล"
+            )
+
+        # รายการของกลางที่ใช้งานจริง: ใช้ตามที่ลูกค้าเลือก หรือถ้าไม่ได้เลือกให้ fallback ใช้ค่าเดิมของบิล
+        active_shared = (
+            selection.shared_ids
+            if selection.shared_ids
+            else shared_ids
+        )
+
+        if selection.shared > 0 and not active_shared:
+            raise ValueError(
+                "กรุณาเลือกรายการของกลางอย่างน้อย 1 รายการ"
             )
 
         deducted, pay_items = self._selected_payment_items(
             items,
             selection.selected,
-            shared_ids,
+            active_shared,
         )
 
         shared_items = [
             item
             for item in items
-            if item["id"] in shared_ids
+            if item["id"] in active_shared
         ]
 
         unpaid_shared = max(
@@ -878,7 +890,7 @@ class PaymentRouter:
                 "และตรวจสอบยอดเงิน"
             )
 
-        return deducted, pay_items, amount
+        return deducted, pay_items, amount, active_shared
 
     # ---------- จ่ายทั้งบิล ----------
 
