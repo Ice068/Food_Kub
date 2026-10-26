@@ -405,15 +405,21 @@
             <br>• หรือกดปุ่ม <strong>➗ ตั้งเป็นของกลาง</strong> ที่เมนูใดก็ได้ เพื่อนำไปหารเฉลี่ยร่วมกับเพื่อนในโต๊ะ
         </div>
 
-        <h3>
-            1. รายการอาหารของโต๊ะ
-            • เลือกจานส่วนตัวที่ต้องการชำระ หรือตั้งเป็นของกลาง
-        </h3>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+            <h3 style="margin: 0;">
+                1. รายการอาหารของโต๊ะ
+                • ติ๊กเลือกเฉพาะจานที่คุณต้องการชำระ
+            </h3>
+            <div style="display: flex; gap: 8px;">
+                <button type="button" onclick="selectAllSplitItems(true)" style="padding: 4px 10px; border-radius: 6px; border: 1px solid #ced4da; background: #fff; cursor: pointer; font-size: 0.85rem; color: #2b8a3e; font-weight: 600;">✓ เลือกทั้งหมด</button>
+                <button type="button" onclick="selectAllSplitItems(false)" style="padding: 4px 10px; border-radius: 6px; border: 1px solid #ced4da; background: #fff; cursor: pointer; font-size: 0.85rem; color: #868e96;">✕ ยกเลิกทั้งหมด</button>
+            </div>
+        </div>
 
         <div class="split-items-list" id="split-items-container">
             {% for item in items %}
             <div
-                class="split-item-card is-selected"
+                class="split-item-card"
                 id="card-{{ item.id }}"
                 data-id="{{ item.id }}"
                 data-price="{{ item.price }}"
@@ -424,7 +430,6 @@
                         type="checkbox"
                         class="split-checkbox"
                         id="check-{{ item.id }}"
-                        checked
                         onchange="onItemToggle({{ item.id }})"
                     >
 
@@ -550,7 +555,6 @@
                         <input
                             type="checkbox"
                             id="include-shared-check"
-                            checked
                             onchange="recalculateSplit()"
                             style="width:18px;height:18px;accent-color:#2b8a3e;"
                         >
@@ -810,6 +814,21 @@
         recalculateSplit();
     }
 
+    function selectAllSplitItems(select) {
+        allCartItems.forEach(item => {
+            if (sharedItemIds.has(item.id)) return;
+            const chk = document.getElementById(`check-${item.id}`);
+            const card = document.getElementById(`card-${item.id}`);
+            if (chk) {
+                chk.checked = select;
+            }
+            if (card) {
+                card.classList.toggle("is-selected", select);
+            }
+        });
+        recalculateSplit();
+    }
+
     function onItemToggle(itemId) {
         const chk = document.getElementById(`check-${itemId}`);
         const card = document.getElementById(`card-${itemId}`);
@@ -847,6 +866,9 @@
             document.getElementById("input-shared-item-ids").value = "[]";
             document.getElementById("input-shared-note").value = "";
 
+            submitBtn.disabled = false;
+            submitBtn.style.opacity = "1";
+            submitBtn.style.cursor = "pointer";
             submitBtn.textContent =
                 "สร้างคำขอชำระทั้งโต๊ะ • " +
                 `${tableTotal.toFixed(2)} บาท`;
@@ -924,9 +946,19 @@
         document.getElementById("summary-total-amount").textContent =
             `${myTotal.toFixed(2)} บาท`;
 
-        submitBtn.textContent =
-            "สร้างคำขอชำระส่วนของฉัน • " +
-            `${myTotal.toFixed(2)} บาท`;
+        if (myTotal <= 0) {
+            submitBtn.disabled = true;
+            submitBtn.style.opacity = "0.5";
+            submitBtn.style.cursor = "not-allowed";
+            submitBtn.textContent = "กรุณาเลือกรายการที่ต้องการชำระ";
+        } else {
+            submitBtn.disabled = false;
+            submitBtn.style.opacity = "1";
+            submitBtn.style.cursor = "pointer";
+            submitBtn.textContent =
+                "สร้างคำขอชำระส่วนของฉัน • " +
+                `${myTotal.toFixed(2)} บาท`;
+        }
 
         document.getElementById("input-selected-items").value =
             JSON.stringify(selectedMap);

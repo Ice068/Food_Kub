@@ -519,11 +519,11 @@
                 data-table="${number}"
                 ${busy}
             >
-                ยืนยันรับเงินครบ ${money(table.total)}
+                ${(table.shared_paid || 0) > 0 ? `ยืนยันรับเงินส่วนที่เหลือ ${money(table.total)}` : `ยืนยันรับเงินครบ ${money(table.total)}`}
             </button>
 
             <small>
-                ตรวจเงินสดหรือยอดเข้าบัญชีจริงก่อนยืนยัน
+                ${(table.shared_paid || 0) > 0 ? `(มีรายการแยกจ่ายแล้ว ${money(table.shared_paid)} • ยืนยันปิดบิลส่วนที่เหลือ)` : `ตรวจเงินสดหรือยอดเข้าบัญชีจริงก่อนยืนยัน`}
             </small>
         `;
     }
@@ -655,6 +655,7 @@
 
                         <div class="t-total">
                             ${money(table.total)}
+                            ${(table.shared_paid || 0) > 0 ? `<br><small style="font-size:0.75rem; color:#2b8a3e; font-weight:bold;">(จ่ายแล้ว ${money(table.shared_paid)})</small>` : ''}
                         </div>
 
                         <ul>${shown}${more}</ul>

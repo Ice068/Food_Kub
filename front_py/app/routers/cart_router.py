@@ -114,6 +114,9 @@ class CartRouter:
                     "qty": qty,
                 })
 
+        shared_paid = float(self.cart_service.get_shared_paid(request))
+        remaining_kitchen_total = max(0.0, kitchen_total - shared_paid)
+
         return self.template_service.render(
             request,
             "cart.html",
@@ -123,6 +126,8 @@ class CartRouter:
                 "total": total,
                 "kitchen_items": kitchen_items,
                 "kitchen_total": kitchen_total,
+                "shared_paid": shared_paid,
+                "remaining_kitchen_total": remaining_kitchen_total,
                 "ordered": ordered == 1,
                 "cart_count": self.cart_service.total_count(
                     request

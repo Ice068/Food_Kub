@@ -857,6 +857,7 @@ class StatsService:
                     item["qty"]
                     for item in items
                 ),
+                "shared_paid": shared_paid,
                 "opened_at": data.get("opened_at"),
             })
 
