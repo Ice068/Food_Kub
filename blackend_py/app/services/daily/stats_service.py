@@ -1,4 +1,5 @@
 from collections import defaultdict
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 import hashlib
@@ -11,7 +12,9 @@ from app.services.table_settings_service import TableSettingsService
 
 TH_TZ = timezone(timedelta(hours=7))
 
-# รายการพิเศษสำหรับส่วนแบ่งของกลาง ไม่ใช่เมนูจริง
+TABLE_BILL_CHANGED = "Table bill has changed"
+
+# รายการพิเศษสำหรับส่วนแบ่งของกลาง
 SHARED_PSEUDO_ID = 9999
 
 
@@ -21,6 +24,26 @@ def _now() -> datetime:
 
 def _day(dt: datetime) -> str:
     return dt.strftime("%Y-%m-%d")
+
+
+@dataclass(frozen=True)
+class LiveOrderUpdate:
+    table: int
+    items: list[dict]
+    status: str | None
+    shared_paid: float
+    expected_opened_at: str | None
+    expected_updated_at: str | None
+
+
+@dataclass(frozen=True)
+class FullBillPayment:
+    table: int
+    opened_at: str
+    expected_items: list[dict]
+    action: str
+    method: str | None
+    expected_total: float | None
 
 
 class StatsService:
@@ -49,6 +72,7 @@ class StatsService:
         }
 
         self.db.collection(self.order_events).document().set(doc)
+
         return doc
 
     # ---------- บันทึกการชำระเงิน ----------
@@ -62,12 +86,7 @@ class StatsService:
         bill_closed: bool,
         payment_type: str | None = None,
     ) -> dict:
-        """
-        payment_type:
-            full = บิลรวม
-            split = แยกจ่าย
-            None = ไม่ระบุ
-        """
+        """บันทึกเงินเข้า พร้อมรูปแบบการชำระและสถานะปิดบิล"""
         if payment_type not in (None, "full", "split"):
             raise ValueError("Invalid payment type")
 
@@ -100,94 +119,139 @@ class StatsService:
         expected_opened_at: str | None = None,
         expected_updated_at: str | None = None,
     ) -> None:
-        """
-        อัปเดตบิลโดยตรวจรุ่นข้อมูลก่อนเขียน
-
-        dining = กำลังรับประทาน
-        waiting_payment = รอชำระ
-
-        ไม่ลบโต๊ะเมื่อรายการว่าง และไม่เปิดบิลที่จ่ายครบแล้วซ้ำ
-        """
+        """ตรวจรุ่นข้อมูลก่อนเขียน และคงสถานะครัวเดิม"""
         if status not in (None, "dining", "waiting_payment"):
             raise ValueError("Invalid table status")
 
-        ref = self.db.collection(self.live_orders).document(str(table))
+        ref = self.db.collection(self.live_orders).document(
+            str(table)
+        )
 
         clean = [
-            self._clean_item(i)
-            for i in items
-            if int(i.get("qty", 0)) > 0
+            self._clean_item(item)
+            for item in items
+            if int(item.get("qty", 0)) > 0
         ]
+
+        order = LiveOrderUpdate(
+            table=table,
+            items=clean,
+            status=status,
+            shared_paid=shared_paid,
+            expected_opened_at=expected_opened_at,
+            expected_updated_at=expected_updated_at,
+        )
 
         @transactional
         def save(transaction):
-            existing = ref.get(transaction=transaction)
-
-            previous = (
-                (existing.to_dict() or {})
-                if existing.exists
-                else {}
+            self._save_live_order(
+                transaction,
+                ref,
+                order,
             )
 
-            if previous.get("paid"):
-                raise ValueError(
-                    "Table is paid; reset before accepting orders"
-                )
-
-            if not clean:
-                return
-
-            if previous and previous.get("opened_at") != expected_opened_at:
-                raise ValueError("Table bill has changed")
-
-            if not previous and expected_opened_at:
-                raise ValueError("Table was reset")
-
-            if previous and expected_updated_at != previous.get("updated_at"):
-                raise ValueError(
-                    "Order changed; reload before updating"
-                )
-
-            if (
-                previous.get("status") == "waiting_payment"
-                and status == "dining"
-            ):
-                raise ValueError("Table is waiting for payment")
-
-            previous_items = {
-                i["id"]: i
-                for i in previous.get("items", [])
-            }
-
-            merged = []
-
-            for item in clean:
-                old = previous_items.get(item["id"])
-                kitchen_status = "cooking"
-
-                if old and item["qty"] <= old["qty"]:
-                    kitchen_status = old.get(
-                        "kitchen_status",
-                        "cooking",
-                    )
-
-                merged.append({
-                    **item,
-                    "kitchen_status": kitchen_status,
-                })
-
-            now = _now().isoformat()
-
-            transaction.set(ref, {
-                "table": table,
-                "items": merged,
-                "shared_paid": shared_paid,
-                "status": status or previous.get("status", "dining"),
-                "opened_at": previous.get("opened_at") or now,
-                "updated_at": now,
-            })
-
         save(self.db.transaction())
+
+    def _save_live_order(
+        self,
+        transaction,
+        ref,
+        order,
+    ):
+        snapshot = ref.get(transaction=transaction)
+
+        previous = (
+            (snapshot.to_dict() or {})
+            if snapshot.exists
+            else {}
+        )
+
+        if previous.get("paid"):
+            raise ValueError(
+                "Table is paid; reset before accepting orders"
+            )
+
+        if not order.items:
+            return
+
+        self._validate_live_order_version(
+            previous,
+            order.status,
+            order.expected_opened_at,
+            order.expected_updated_at,
+        )
+
+        previous_items = {
+            item["id"]: item
+            for item in previous.get("items", [])
+        }
+
+        merged = [
+            self._with_kitchen_status(
+                item,
+                previous_items.get(item["id"]),
+            )
+            for item in order.items
+        ]
+
+        now = _now().isoformat()
+
+        transaction.set(ref, {
+            "table": order.table,
+            "items": merged,
+            "shared_paid": order.shared_paid,
+            "status": (
+                order.status
+                or previous.get("status", "dining")
+            ),
+            "opened_at": previous.get("opened_at") or now,
+            "updated_at": now,
+        })
+
+    @staticmethod
+    def _validate_live_order_version(
+        previous,
+        status,
+        expected_opened_at,
+        expected_updated_at,
+    ):
+        if (
+            previous
+            and previous.get("opened_at") != expected_opened_at
+        ):
+            raise ValueError(TABLE_BILL_CHANGED)
+
+        if not previous and expected_opened_at:
+            raise ValueError("Table was reset")
+
+        if (
+            previous
+            and previous.get("updated_at") != expected_updated_at
+        ):
+            raise ValueError(
+                "Order changed; reload before updating"
+            )
+
+        if (
+            previous.get("status") == "waiting_payment"
+            and status == "dining"
+        ):
+            raise ValueError("Table is waiting for payment")
+
+    @staticmethod
+    def _with_kitchen_status(item, old):
+        kitchen_status = "cooking"
+
+        if old and item["qty"] <= old["qty"]:
+            kitchen_status = old.get(
+                "kitchen_status",
+                "cooking",
+            )
+
+        return {
+            **item,
+            "kitchen_status": kitchen_status,
+        }
 
     # ---------- ชำระครบจากระบบชำระเงิน ----------
 
@@ -200,7 +264,9 @@ class StatsService:
         เรียกหลังระบบยืนยันการชำระครบแล้วเท่านั้น
         เก็บโต๊ะไว้จนพนักงานกดเคลียร์
         """
-        ref = self.db.collection(self.live_orders).document(str(table))
+        ref = self.db.collection(self.live_orders).document(
+            str(table)
+        )
 
         @transactional
         def save(transaction):
@@ -244,11 +310,11 @@ class StatsService:
     def _bill_signature(items):
         return sorted(
             (
-                int(i["id"]),
-                int(i["qty"]),
-                Decimal(str(i["price"])),
+                int(item["id"]),
+                int(item["qty"]),
+                Decimal(str(item["price"])),
             )
-            for i in items
+            for item in items
         )
 
     def get_live_table(self, table):
@@ -258,7 +324,11 @@ class StatsService:
             .get()
         )
 
-        return snapshot.to_dict() if snapshot.exists else None
+        return (
+            snapshot.to_dict()
+            if snapshot.exists
+            else None
+        )
 
     # ---------- เรียกชำระ / แอดมินยืนยันรับเงิน ----------
 
@@ -271,20 +341,12 @@ class StatsService:
         method=None,
         expected_total=None,
     ):
-        """
-        บันทึกใบรับเงินและสถานะชำระครบใน transaction เดียวกัน
-        ป้องกันการยืนยันซ้ำและการยืนยันบิลที่เปลี่ยนไป
-        """
-        if action not in ("request-payment", "confirm-payment"):
-            raise ValueError("Invalid action")
+        """บันทึกใบรับเงินและสถานะชำระครบใน transaction เดียวกัน"""
+        self._validate_payment_action(action, method)
 
-        if (
-            action == "confirm-payment"
-            and method not in ("cash", "qr_bank")
-        ):
-            raise ValueError("Invalid payment method")
-
-        ref = self.db.collection(self.live_orders).document(str(table))
+        ref = self.db.collection(self.live_orders).document(
+            str(table)
+        )
 
         receipt_id = "table-" + hashlib.sha256(
             f"{table}:{opened_at}".encode()
@@ -295,111 +357,194 @@ class StatsService:
             .document(receipt_id)
         )
 
+        payment = FullBillPayment(
+            table=table,
+            opened_at=opened_at,
+            expected_items=expected_items,
+            action=action,
+            method=method,
+            expected_total=expected_total,
+        )
+
         @transactional
         def update(transaction):
-            snapshot = ref.get(transaction=transaction)
-
-            if not snapshot.exists:
-                raise LookupError("Table not found")
-
-            data = snapshot.to_dict() or {}
-
-            if data.get("opened_at") != opened_at:
-                raise ValueError("Table bill has changed")
-
-            # ยืนยันซ้ำคืนผลเดิม ไม่บันทึกยอดขายเพิ่ม
-            if data.get("paid"):
-                return {
-                    "status": "success",
-                    "paid": True,
-                    "payment_id": data.get("payment_id"),
-                }
-
-            items = data.get("items", [])
-
-            if (
-                not items
-                or self._bill_signature(items)
-                != self._bill_signature(expected_items)
-            ):
-                raise ValueError("Table bill has changed")
-
-            now = _now()
-
-            if action == "request-payment":
-                transaction.update(ref, {
-                    "status": "waiting_payment",
-                    "updated_at": now.isoformat(),
-                })
-
-                return {
-                    "status": "success",
-                    "paid": False,
-                }
-
-            if data.get("status") != "waiting_payment":
-                raise ValueError(
-                    "Table is not waiting for payment"
-                )
-
-            amount = sum(
-                (
-                    Decimal(str(i["price"])) * i["qty"]
-                    for i in items
-                ),
-                Decimal(0),
+            return self._update_full_bill(
+                transaction,
+                ref,
+                receipt_ref,
+                payment,
             )
 
-            credit = Decimal(str(data.get("shared_paid", 0)))
-            amount -= credit
+        return update(self.db.transaction())
 
-            if (
-                not amount.is_finite()
-                or amount <= 0
-                or amount != amount.quantize(Decimal("0.01"))
-            ):
-                raise ValueError("Invalid outstanding amount")
+    @staticmethod
+    def _validate_payment_action(action, method):
+        if action not in (
+            "request-payment",
+            "confirm-payment",
+        ):
+            raise ValueError("Invalid action")
 
-            if (
-                expected_total is None
-                or Decimal(str(expected_total)) != amount
-            ):
-                raise ValueError(
-                    "Outstanding amount has changed"
-                )
+        if (
+            action == "confirm-payment"
+            and method not in ("cash", "qr_bank")
+        ):
+            raise ValueError("Invalid payment method")
 
-            receipt = {
-                "table": table,
-                "method": method,
-                "amount": float(amount),
-                "items": [self._clean_item(i) for i in items],
-                "bill_closed": True,
-                "payment_type": "full",
-                "confirmed_by": "admin",
-                "created_at": now.isoformat(),
-                "date": _day(now),
+    def _update_full_bill(
+        self,
+        transaction,
+        ref,
+        receipt_ref,
+        payment,
+    ):
+        snapshot = ref.get(transaction=transaction)
+
+        if not snapshot.exists:
+            raise LookupError("Table not found")
+
+        data = snapshot.to_dict() or {}
+
+        if data.get("opened_at") != payment.opened_at:
+            raise ValueError(TABLE_BILL_CHANGED)
+
+        # ยืนยันซ้ำ คืนผลเดิมโดยไม่บันทึกยอดขายเพิ่ม
+        if data.get("paid"):
+            return {
+                "status": "success",
+                "paid": True,
+                "payment_id": data.get("payment_id"),
             }
 
-            transaction.set(receipt_ref, receipt)
+        items = data.get("items", [])
 
+        self._validate_payment_items(
+            items,
+            payment.expected_items,
+        )
+
+        now = _now()
+
+        if payment.action == "request-payment":
             transaction.update(ref, {
-                "items": [],
-                "paid": True,
                 "status": "waiting_payment",
                 "updated_at": now.isoformat(),
-                "payment_id": receipt_id,
-                "payment_amount": float(amount),
-                "payment_method": method,
-                "shared_paid": 0,
             })
 
             return {
                 "status": "success",
-                "paid": True,
-                "payment_id": receipt_id,
+                "paid": False,
             }
 
-        return update(self.db.transaction())
+        if data.get("status") != "waiting_payment":
+            raise ValueError(
+                "Table is not waiting for payment"
+            )
+
+        amount = self._validated_outstanding_amount(
+            items,
+            data.get("shared_paid", 0),
+            payment.expected_total,
+        )
+
+        return self._record_full_payment(
+            transaction,
+            ref,
+            receipt_ref,
+            payment,
+            items,
+            amount,
+            now,
+        )
+
+    def _validate_payment_items(
+        self,
+        items,
+        expected_items,
+    ):
+        if (
+            not items
+            or self._bill_signature(items)
+            != self._bill_signature(expected_items)
+        ):
+            raise ValueError(TABLE_BILL_CHANGED)
+
+    @staticmethod
+    def _validated_outstanding_amount(
+        items,
+        shared_paid,
+        expected_total,
+    ):
+        gross = sum(
+            (
+                Decimal(str(item["price"])) * item["qty"]
+                for item in items
+            ),
+            Decimal(0),
+        )
+
+        amount = gross - Decimal(str(shared_paid))
+
+        if (
+            not amount.is_finite()
+            or amount <= 0
+            or amount != amount.quantize(Decimal("0.01"))
+        ):
+            raise ValueError("Invalid outstanding amount")
+
+        if (
+            expected_total is None
+            or Decimal(str(expected_total)) != amount
+        ):
+            raise ValueError(
+                "Outstanding amount has changed"
+            )
+
+        return amount
+
+    def _record_full_payment(
+        self,
+        transaction,
+        ref,
+        receipt_ref,
+        payment,
+        items,
+        amount,
+        now,
+    ):
+        receipt = {
+            "table": payment.table,
+            "method": payment.method,
+            "amount": float(amount),
+            "items": [
+                self._clean_item(item)
+                for item in items
+            ],
+            "bill_closed": True,
+            "payment_type": "full",
+            "confirmed_by": "admin",
+            "created_at": now.isoformat(),
+            "date": _day(now),
+        }
+
+        transaction.set(receipt_ref, receipt)
+
+        transaction.update(ref, {
+            "items": [],
+            "paid": True,
+            "status": "waiting_payment",
+            "updated_at": now.isoformat(),
+            "payment_id": receipt_ref.id,
+            "payment_amount": float(amount),
+            "payment_method": payment.method,
+            "shared_paid": 0,
+        })
+
+        return {
+            "status": "success",
+            "paid": True,
+            "payment_id": receipt_ref.id,
+        }
 
     # ---------- เคลียร์โต๊ะ ----------
 
@@ -412,7 +557,9 @@ class StatsService:
         เคลียร์เฉพาะโต๊ะที่ชำระครบแล้ว
         เก็บประวัติยอดขายและการชำระเงินไว้
         """
-        ref = self.db.collection(self.live_orders).document(str(table))
+        ref = self.db.collection(self.live_orders).document(
+            str(table)
+        )
 
         @transactional
         def reset(transaction):
@@ -424,7 +571,7 @@ class StatsService:
             data = snapshot.to_dict() or {}
 
             if data.get("opened_at") != opened_at:
-                raise ValueError("Table bill has changed")
+                raise ValueError(TABLE_BILL_CHANGED)
 
             if not data.get("paid") or data.get("items"):
                 raise ValueError("Table is not fully paid")
@@ -444,10 +591,16 @@ class StatsService:
         expected_qty: int,
         opened_at: str,
     ) -> dict | None:
-        if status not in ("cooking", "ready", "served"):
+        if status not in (
+            "cooking",
+            "ready",
+            "served",
+        ):
             raise ValueError("Invalid kitchen status")
 
-        ref = self.db.collection(self.live_orders).document(str(table))
+        ref = self.db.collection(self.live_orders).document(
+            str(table)
+        )
 
         @transactional
         def update(transaction):
@@ -459,7 +612,7 @@ class StatsService:
             data = snapshot.to_dict() or {}
 
             if data.get("opened_at") != opened_at:
-                raise ValueError("Table bill has changed")
+                raise ValueError(TABLE_BILL_CHANGED)
 
             items = [
                 dict(item)
@@ -467,7 +620,11 @@ class StatsService:
             ]
 
             item = next(
-                (i for i in items if i["id"] == item_id),
+                (
+                    row
+                    for row in items
+                    if row["id"] == item_id
+                ),
                 None,
             )
 
@@ -475,7 +632,9 @@ class StatsService:
                 return None
 
             if item["qty"] != expected_qty:
-                raise ValueError("Order quantity has changed")
+                raise ValueError(
+                    "Order quantity has changed"
+                )
 
             item["kitchen_status"] = status
 
@@ -510,25 +669,30 @@ class StatsService:
         ]
 
         tx_by_day = self._transactions_by_day(day_keys)
+
         today_tx = tx_by_day.get(today, [])
         yesterday_tx = tx_by_day.get(yesterday, [])
 
         revenue_today = round(
-            sum(t["amount"] for t in today_tx),
+            sum(tx["amount"] for tx in today_tx),
             2,
         )
 
         revenue_yesterday = round(
-            sum(t["amount"] for t in yesterday_tx),
+            sum(tx["amount"] for tx in yesterday_tx),
             2,
         )
 
         bills_today = sum(
-            1 for t in today_tx if t.get("bill_closed")
+            1
+            for tx in today_tx
+            if tx.get("bill_closed")
         )
 
         bills_yesterday = sum(
-            1 for t in yesterday_tx if t.get("bill_closed")
+            1
+            for tx in yesterday_tx
+            if tx.get("bill_closed")
         )
 
         top_dishes = self._top_dishes(today, limit=5)
@@ -557,13 +721,17 @@ class StatsService:
                 "total": TableSettingsService().get_count(),
                 "live": live,
             },
-            "top_dish": top_dishes[0] if top_dishes else None,
+            "top_dish": (
+                top_dishes[0]
+                if top_dishes
+                else None
+            ),
             "top_dishes": top_dishes,
             "recent_transactions": [
-                self._public_tx(t)
-                for t in sorted(
+                self._public_tx(tx)
+                for tx in sorted(
                     today_tx,
-                    key=lambda t: t["created_at"],
+                    key=lambda tx: tx["created_at"],
                     reverse=True,
                 )[:10]
             ],
@@ -572,8 +740,8 @@ class StatsService:
                     "date": day,
                     "total": round(
                         sum(
-                            t["amount"]
-                            for t in tx_by_day.get(day, [])
+                            tx["amount"]
+                            for tx in tx_by_day.get(day, [])
                         ),
                         2,
                     ),
@@ -635,7 +803,10 @@ class StatsService:
 
         ranked = sorted(
             counts.values(),
-            key=lambda row: (-row["qty"], row["id"]),
+            key=lambda row: (
+                -row["qty"],
+                row["id"],
+            ),
         )
 
         return ranked[:limit]
@@ -661,7 +832,6 @@ class StatsService:
 
             paid = bool(data.get("paid", False))
 
-            # โต๊ะจ่ายครบยังแสดงจนพนักงานกดเคลียร์
             if not items and not paid:
                 continue
 
@@ -670,16 +840,22 @@ class StatsService:
                 for item in items
             )
 
-            shared_paid = float(data.get("shared_paid", 0))
+            shared_paid = float(
+                data.get("shared_paid", 0)
+            )
 
             tables.append({
                 "table": data.get("table"),
                 "status": data.get("status", "dining"),
                 "paid": paid,
                 "items": items,
-                "total": round(max(0, gross - shared_paid), 2),
+                "total": round(
+                    max(0, gross - shared_paid),
+                    2,
+                ),
                 "item_count": sum(
-                    item["qty"] for item in items
+                    item["qty"]
+                    for item in items
                 ),
                 "opened_at": data.get("opened_at"),
             })
@@ -696,12 +872,16 @@ class StatsService:
     # ---------- ยอดขายรายชั่วโมง ----------
 
     @staticmethod
-    def _sales_by_hour(today_tx: list[dict]) -> list[dict]:
+    def _sales_by_hour(
+        today_tx: list[dict],
+    ) -> list[dict]:
         totals = [0.0] * 24
 
         for transaction in today_tx:
             hour = (
-                datetime.fromisoformat(transaction["created_at"])
+                datetime.fromisoformat(
+                    transaction["created_at"]
+                )
                 .astimezone(TH_TZ)
                 .hour
             )
@@ -723,8 +903,13 @@ class StatsService:
             "table": transaction.get("table"),
             "method": transaction.get("method"),
             "amount": transaction["amount"],
-            "bill_closed": transaction.get("bill_closed", False),
-            "payment_type": transaction.get("payment_type"),
+            "bill_closed": transaction.get(
+                "bill_closed",
+                False,
+            ),
+            "payment_type": transaction.get(
+                "payment_type"
+            ),
             "created_at": transaction["created_at"],
             "item_count": sum(
                 item["qty"]

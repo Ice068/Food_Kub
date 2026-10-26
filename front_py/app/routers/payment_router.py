@@ -9,7 +9,7 @@ from decimal import Decimal, InvalidOperation
 
 import httpx
 from fastapi import APIRouter, Depends, Form, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 
 from app.core.table_context import set_table_context, table_query
 from app.services.cart_service import CartService
@@ -99,7 +99,6 @@ class PaymentRouter:
             dependencies=[Depends(set_table_context)],
         )
 
-        # เก็บในหน่วยความจำของ process นี้
         self._attempts = {}
         self._locks = {}
         self._pending = {}
@@ -111,9 +110,47 @@ class PaymentRouter:
         )
 
         self.router.add_api_route(
+            "/status",
+            self.payment_status,
+            methods=["GET"],
+            responses={
+                400: {
+                    "description": "Table number is required",
+                },
+                503: {
+                    "description": "Backend bill state unavailable",
+                },
+            },
+        )
+
+        self.router.add_api_route(
             "/pay",
             self.process_payment,
             methods=["POST"],
+        )
+
+    # ---------- API ตรวจสถานะการชำระ ----------
+
+    async def payment_status(self, request: Request):
+        table = getattr(request.state, "table_id", None)
+
+        if table is None:
+            return JSONResponse(
+                {"error": "กรุณาสแกน QR ประจำโต๊ะก่อน"},
+                status_code=400,
+                headers={"Cache-Control": "no-store"},
+            )
+
+        live = (
+            getattr(request.state, "live_table", None)
+            or {}
+        )
+
+        return JSONResponse(
+            {
+                "payment_confirmed": bool(live.get("paid")),
+            },
+            headers={"Cache-Control": "no-store"},
         )
 
     # ---------- ขอบเขตผู้ใช้และบิล ----------
@@ -184,12 +221,76 @@ class PaymentRouter:
     # ---------- หน้า Checkout ----------
 
     async def show_checkout(self, request: Request):
+        early_response = await self._checkout_early_response(
+            request
+        )
+
+        if early_response is not None:
+            return early_response
+
+        try:
+            bill = await self._bill(request)
+        except ValueError as exc:
+            return self._error(request, str(exc))
+        except httpx.HTTPError:
+            return self._error(
+                request,
+                "ตรวจสอบบิลไม่ได้ กรุณาลองใหม่",
+                503,
+            )
+
+        items, total, shared_ids, shared_paid = bill
+
+        if not items or total <= 0:
+            return RedirectResponse(
+                f"/cart{table_query(request)}",
+                status_code=303,
+            )
+
+        self._prune_checkout_attempts()
+
+        if len(self._attempts) >= 2000:
+            return self._error(
+                request,
+                "ระบบชำระเงินเต็ม กรุณาติดต่อพนักงาน",
+                503,
+            )
+
+        owner, scope = self._scope(request)
+
+        token = self._create_checkout_attempt(
+            owner,
+            scope,
+            bill,
+        )
+
+        response = await self._render_checkout(
+            request,
+            items,
+            total,
+            shared_ids,
+            shared_paid,
+            token,
+        )
+
+        if not await self._sync_checkout_waiting(
+            request,
+            items,
+        ):
+            return self._error(
+                request,
+                "บิลเปลี่ยน กรุณาโหลดข้อมูลใหม่",
+                409,
+            )
+
+        return response
+
+    async def _checkout_early_response(self, request):
         live = getattr(request.state, "live_table", None)
 
         if live and live.get("paid"):
             return self._staff_paid_result(request, live)
 
-        # นำรายการที่ยังอยู่ในตะกร้าเข้าบิลก่อนแสดงยอดชำระ
         table = getattr(request.state, "table_id", None)
 
         if (
@@ -203,67 +304,52 @@ class PaymentRouter:
                     503,
                 )
 
-        owner, scope = self._scope(request)
+        _, scope = self._scope(request)
 
-        # ล้างสถานะรอชำระของบิลเก่าเมื่อโต๊ะเริ่มบิลใหม่
-        if table is not None:
-            prefix = f"table:{table}:"
+        self._clear_old_pending(table, scope)
 
-            for old_scope in list(self._pending):
-                if (
-                    old_scope.startswith(prefix)
-                    and old_scope != scope
-                ):
-                    self._pending.pop(old_scope, None)
-
-        # มีรายการที่ยังไม่ทราบผล ให้แสดงรายการเดิม
         if scope in self._pending:
             return self._render(
                 request,
                 self._pending[scope],
             )
 
-        try:
-            items, total, shared_ids, shared_paid = (
-                await self._bill(request)
-            )
-        except ValueError as exc:
-            return self._error(request, str(exc))
-        except httpx.HTTPError:
-            return self._error(
-                request,
-                "ตรวจสอบบิลไม่ได้ กรุณาลองใหม่",
-                503,
-            )
+        return None
 
-        if not items or total <= 0:
-            return RedirectResponse(
-                f"/cart{table_query(request)}",
-                status_code=303,
-            )
+    def _clear_old_pending(self, table, scope):
+        if table is None:
+            return
 
+        prefix = f"table:{table}:"
+
+        # คัด key ก่อน แล้วจึงลบ เพื่อไม่เปลี่ยน dictionary ขณะวนลูป
+        old_scopes = [
+            key
+            for key in self._pending
+            if key.startswith(prefix) and key != scope
+        ]
+
+        for old_scope in old_scopes:
+            self._pending.pop(old_scope, None)
+
+    def _prune_checkout_attempts(self):
         now = time.monotonic()
 
-        # ลบเฉพาะโทเค็นที่หมดอายุและยังไม่เคยส่งชำระ
         self._attempts = {
             key: value
             for key, value in self._attempts.items()
             if value.get("context") or value["expires"] > now
         }
 
-        if len(self._attempts) >= 2000:
-            return self._error(
-                request,
-                "ระบบชำระเงินเต็ม กรุณาติดต่อพนักงาน",
-                503,
-            )
+    def _create_checkout_attempt(self, owner, scope, bill):
+        items, total, shared_ids, shared_paid = bill
 
         token = secrets.token_urlsafe(32)
 
         self._attempts[token] = {
             "owner": owner,
             "scope": scope,
-            "expires": now + 900,
+            "expires": time.monotonic() + 900,
             "fingerprint": self._fingerprint(
                 items,
                 total,
@@ -273,6 +359,17 @@ class PaymentRouter:
             "context": None,
         }
 
+        return token
+
+    async def _render_checkout(
+        self,
+        request,
+        items,
+        total,
+        shared_ids,
+        shared_paid,
+        token,
+    ):
         methods = await self.payment_service.get_methods()
 
         response = self.template_service.render(
@@ -294,35 +391,31 @@ class PaymentRouter:
 
         response.headers["Cache-Control"] = "no-store"
 
+        return response
+
+    async def _sync_checkout_waiting(self, request, items):
         current_live = (
             getattr(request.state, "live_table", None)
             or {}
         )
 
-        if current_live.get("status") != "waiting_payment":
-            synced = await self.stats_service.sync_live_order(
-                table,
-                items,
-                status="waiting_payment",
-                shared_paid=self.cart_service.get_shared_paid(
-                    request
-                ),
-                expected_opened_at=current_live.get(
-                    "opened_at"
-                ),
-                expected_updated_at=current_live.get(
-                    "updated_at"
-                ),
-            )
+        if current_live.get("status") == "waiting_payment":
+            return True
 
-            if table is not None and not synced:
-                return self._error(
-                    request,
-                    "บิลเปลี่ยน กรุณาโหลดข้อมูลใหม่",
-                    409,
-                )
+        table = getattr(request.state, "table_id", None)
 
-        return response
+        synced = await self.stats_service.sync_live_order(
+            table,
+            items,
+            status="waiting_payment",
+            shared_paid=self.cart_service.get_shared_paid(
+                request
+            ),
+            expected_opened_at=current_live.get("opened_at"),
+            expected_updated_at=current_live.get("updated_at"),
+        )
+
+        return table is None or synced
 
     # ---------- รับคำขอชำระเงิน ----------
 
@@ -352,7 +445,6 @@ class PaymentRouter:
                 403,
             )
 
-        # ป้องกันคำขอพร้อมกันภายใน process เดียวกัน
         async with self._locks.setdefault(
             scope,
             asyncio.Lock(),
@@ -392,7 +484,6 @@ class PaymentRouter:
         )
 
     def _attempt_response(self, request, scope, attempt):
-        # ส่งคำขอเดิมซ้ำ คืนผลเดิมโดยไม่เรียกชำระอีก
         if attempt["context"] is not None:
             return self._render(
                 request,
@@ -446,7 +537,6 @@ class PaymentRouter:
 
         context = self._payment_context(plan)
 
-        # ใช้โทเค็นก่อนติดต่อ Backend เพื่อกันส่งซ้ำ
         attempt["context"] = context
 
         response = await self._request_payment(
@@ -568,7 +658,6 @@ class PaymentRouter:
                 new_items,
             )
 
-            # อ่านรหัสบิลที่ Backend กำหนดก่อนสร้างโทเค็น
             async with httpx.AsyncClient(
                 timeout=5.0
             ) as client:
@@ -725,6 +814,7 @@ class PaymentRouter:
                 )
 
             deducted[str(item_id)] = qty
+
             pay_items.append(
                 self._payment_line(item, qty)
             )
@@ -1063,7 +1153,6 @@ class PaymentRouter:
         payment_id,
         closed,
     ):
-        # ปัญหาสถิติต้องไม่ทำให้ลูกค้าจ่ายเงินซ้ำ
         try:
             written = await self.stats_service.record_transaction(
                 getattr(request.state, "table_id", None),
