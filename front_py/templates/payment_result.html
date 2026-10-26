@@ -1,6 +1,13 @@
 {% extends "base.html" %}
 
 {% block extra_head %}
+{% if not payment_confirmed|default(false) and table_id|default(none) %}
+<meta
+    http-equiv="refresh"
+    content="10;url=/checkout?table={{ table_id }}"
+>
+{% endif %}
+
 <style>
     output.pending-banner,
     output.fully-paid-banner,
@@ -89,6 +96,65 @@
         color: #495057;
         line-height: 1.6;
     }
+
+    /* หน้าต่างชำระสำเร็จ */
+    .payment-success-dialog {
+        position: fixed;
+        inset: 0;
+        width: min(420px, calc(100vw - 32px));
+        box-sizing: border-box;
+        margin: auto;
+        padding: 32px 24px;
+        border: 0;
+        border-radius: 20px;
+        background: #fff;
+        color: #212529;
+        text-align: center;
+        box-shadow: 0 20px 70px rgba(0, 0, 0, 0.2);
+    }
+
+    .payment-success-dialog::backdrop {
+        background: rgba(0, 0, 0, 0.45);
+    }
+
+    .payment-success-icon {
+        display: grid;
+        place-items: center;
+        width: 72px;
+        height: 72px;
+        margin: 0 auto 16px;
+        border-radius: 50%;
+        background: #ebfbee;
+        color: #2b8a3e;
+        font-size: 42px;
+        font-weight: 700;
+    }
+
+    .payment-success-dialog h2 {
+        margin: 0 0 12px;
+        color: #2b8a3e;
+    }
+
+    .payment-success-dialog p {
+        margin: 8px 0;
+        line-height: 1.6;
+    }
+
+    .payment-success-dialog .payment-success-close {
+        display: block;
+        margin-top: 24px;
+        padding: 12px 16px;
+        border-radius: 10px;
+        background: #2b8a3e;
+        color: #fff;
+        font-weight: 600;
+        text-decoration: none;
+    }
+
+    .payment-success-close:focus-visible {
+        outline: 3px solid #212529;
+        outline-offset: 4px;
+    }
 </style>
 {% endblock %}
 
@@ -99,6 +165,7 @@
     {% if error %}
     <div class="result-card result-error">
         <h2>⚠️ ตรวจสอบรายการชำระเงิน</h2>
+
         <p>{{ error }}</p>
 
         <div class="result-actions">
@@ -151,7 +218,9 @@
         <output class="pending-banner">
             รายการนี้ยังอยู่ระหว่างรอยืนยันรับเงิน
             บิลยังไม่ถูกหักหรือปิด
+
             <br>
+
             หากชำระแล้ว กรุณาให้พนักงานตรวจสอบ
             และอย่าชำระรายการเดิมซ้ำ
         </output>
@@ -212,6 +281,7 @@
             {% else %}
             <output class="remaining-banner">
                 ℹ️ ยอดค้างชำระที่เหลือ:
+
                 <strong>
                     {{ "%.2f"|format(remaining_total) }} บาท
                 </strong>
@@ -238,9 +308,11 @@
         {% else %}
         <div class="remaining-banner">
             ยอดค้างชำระของบิลยังคงเป็น
+
             <strong>
                 {{ "%.2f"|format(remaining_total) }} บาท
             </strong>
+
             จนกว่าจะยืนยันรับเงิน
         </div>
 
@@ -263,4 +335,68 @@
     </div>
     {% endif %}
 </div>
+
+<!-- แสดงเฉพาะเมื่อยืนยันว่าชำระครบแล้ว -->
+{% if confirmed and is_fully_paid|default(false) and not error|default(false) %}
+<dialog
+    id="payment-success-dialog"
+    class="payment-success-dialog"
+    aria-labelledby="payment-success-title"
+    aria-describedby="payment-success-description"
+>
+    <div class="payment-success-icon" aria-hidden="true">
+        ✓
+    </div>
+
+    <h2 id="payment-success-title">ชำระสำเร็จ</h2>
+
+    <p id="payment-success-description">
+        พนักงานยืนยันการรับเงินเรียบร้อยแล้ว
+    </p>
+
+    {% if table_id|default(none) is not none %}
+    <p>โต๊ะ {{ table_id }}</p>
+    {% endif %}
+
+    <p>
+        <strong>{{ "%.2f"|format(total) }} บาท</strong>
+    </p>
+
+    <p>ขอบคุณที่ใช้บริการครับ</p>
+
+    <a
+        href="/{{ table_query }}"
+        id="payment-success-close"
+        class="payment-success-close"
+        autofocus
+    >
+        ปิดและกลับหน้าเมนู
+    </a>
+</dialog>
+
+<script>
+(() => {
+    const dialog = document.getElementById(
+        "payment-success-dialog"
+    );
+
+    const closeLink = document.getElementById(
+        "payment-success-close"
+    );
+
+    if (!dialog || !closeLink) return;
+
+    // กด Escape ปิดหน้าต่างแล้วกลับหน้าเมนู
+    dialog.addEventListener("close", () => {
+        window.location.replace(closeLink.href);
+    });
+
+    if (typeof dialog.showModal === "function") {
+        dialog.showModal();
+    } else {
+        dialog.setAttribute("open", "");
+    }
+})();
+</script>
+{% endif %}
 {% endblock %}

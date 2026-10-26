@@ -704,3 +704,37 @@ details.all-menu summary {
         font-size: 1.7rem;
     }
 }
+/* ปุ่มเรียกชำระ ยืนยันรับเงิน และช่องเลือกวิธีรับเงิน */
+.table-payment,
+.table-payment-method {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: 10px;
+    padding: 10px;
+    border: 1px solid #d9480f;
+    border-radius: 8px;
+    background: #fff;
+    color: #923000;
+    font: inherit;
+}
+
+.table-payment {
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.table-payment:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
+
+.payment-method-label {
+    display: block;
+    margin-top: 10px;
+}
+
+.table-tile small {
+    display: block;
+    margin-top: 8px;
+}
