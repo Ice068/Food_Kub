@@ -856,6 +856,11 @@
                 return;
             }
 
+            if (action === "confirm-payment") {
+                const methodLabel = method === "cash"
+                    ? "เงินสด"
+                    : "เงินเข้าบัญชี";
+
                 const isPartial = (table.shared_paid || 0) > 0;
                 const msg = isPartial
                     ? `⚠️ ยืนยันปิดบิลโต๊ะ ${number} ทั้งหมด?\n\n` +
