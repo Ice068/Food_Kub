@@ -309,10 +309,18 @@ class PaymentRouter:
         self._clear_old_pending(table, scope)
 
         if scope in self._pending:
-            return self._render(
-                request,
-                self._pending[scope],
-            )
+            pending_ctx = self._pending[scope]
+            if (
+                request.query_params.get("retry")
+                or request.query_params.get("new")
+                or pending_ctx.get("payment_confirmed")
+            ):
+                self._pending.pop(scope, None)
+            else:
+                return self._render(
+                    request,
+                    self._pending[scope],
+                )
 
         return None
 
@@ -580,6 +588,8 @@ class PaymentRouter:
             context["result"]["payment_id"],
             closed,
         )
+
+        self._pending.pop(scope, None)
 
         return self._render(request, context)
 

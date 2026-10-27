@@ -523,6 +523,52 @@ class TableQrTests(unittest.TestCase):
         )
         self.assertEqual(resp2.status_code, 200)
         self.assertIn("ยืนยันการชำระเงินแล้ว", resp2.text)
+        # โต๊ะ 15 ปิดบิลเรียบร้อยแล้ว
+        self.assertNotIn(15, self.stats.live)
+
+    def test_split_bill_both_customers_use_split_mode_independently(self):
+        import json
+        import re
+        # โต๊ะ 16 สั่ง ข้าวผัด 2 จาน (100.-)
+        self.client.post("/cart/add/1?table=16")
+        self.client.post("/cart/update/1?table=16", data={"quantity": 2})
+
+        # คนที่ 1 จ่ายจานแรก 50.- ด้วยเงินสด (cash)
+        resp1 = self.pay(16, **{
+            "method": "cash",
+            "split_mode": "split",
+            "selected_items": json.dumps({"1": 1}),
+            "shared_amount": "0.0",
+            "shared_note": "",
+            "shared_item_ids": json.dumps([]),
+        })
+        self.assertEqual(resp1.status_code, 200)
+        self.assertIn("50.00", resp1.text)
+
+        # คนที่ 2 เปิด checkout จากเครื่องอื่น
+        other = TestClient(self.app)
+        checkout_page = other.get("/checkout?table=16")
+        self.assertEqual(checkout_page.status_code, 200)
+        match = re.search(r'name="payment_token"\s+value="([^"]+)"', checkout_page.text)
+        token2 = match.group(1) if match else ""
+
+        # คนที่ 2 จ่ายจานที่สอง 50.- ด้วย QR พร้อมเพย์ (qr_bank)
+        resp2 = other.post(
+            "/checkout/pay?table=16",
+            data={
+                "method": "qr_bank",
+                "split_mode": "split",
+                "payment_token": token2,
+                "selected_items": json.dumps({"1": 1}),
+                "shared_amount": "0.00",
+                "shared_note": "",
+                "shared_item_ids": "[]",
+            },
+        )
+        self.assertEqual(resp2.status_code, 200)
+        self.assertIn("ยืนยันการชำระเงินแล้ว", resp2.text)
+        # ปิดบิลโต๊ะเรียบร้อย
+        self.assertNotIn(16, self.stats.live)
 
 
 if __name__ == "__main__":
