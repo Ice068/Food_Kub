@@ -1,6 +1,8 @@
 fastapi
 uvicorn
 jinja2
+itsdangerous
 python-multipart
 httpx
 firebase-admin
+qrcode[pil]

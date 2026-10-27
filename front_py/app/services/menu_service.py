@@ -58,3 +58,14 @@ class MenuService:
                 return False
             resp.raise_for_status()
             return True
+
+    async def set_availability(self, item_id: int, available: bool) -> bool:
+        async with httpx.AsyncClient() as client:
+            resp = await client.patch(
+                f"{self.backend_url}/api/admin/availability/{item_id}",
+                json={"available": available},
+            )
+            if resp.status_code == 404:
+                return False
+            resp.raise_for_status()
+            return True

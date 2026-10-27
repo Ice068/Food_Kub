@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} | Food Kub</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="container tables-page">
+    <header class="tables-header no-print">
+        <a href="/admin/" class="back-link">← กลับหน้าจัดการเมนู</a>
+        <button type="button" class="btn-add print-button" onclick="window.print()">🖨️ พิมพ์ QR Code</button>
+    </header>
+    <section class="tables-intro no-print">
+        <p class="eyebrow">จัดการโต๊ะ</p>
+        <h1>สร้าง QR Code สำหรับโต๊ะ</h1>
+        <p>สแกน QR เพื่อเปิดหน้าเมนูพร้อมหมายเลขโต๊ะ และพิมพ์แยกติดแต่ละโต๊ะได้</p>
+        <form method="get" action="/admin/tables" class="table-count-form">
+            <label for="count">จำนวนโต๊ะ</label>
+            <input id="count" type="number" name="count" min="1" max="30" value="{{ count }}">
+            <button type="submit" class="btn-add">สร้าง QR</button>
+        </form>
+    </section>
+    <div class="table-qr-grid">
+        {% for table in tables %}
+        <article class="table-qr-card">
+            <h2>โต๊ะ {{ table.number }}</h2>
+            <img src="data:image/png;base64,{{ table.qr_data }}" alt="QR Code โต๊ะ {{ table.number }}">
+            <p>สแกนเพื่อสั่งอาหาร</p>
+            <small>{{ table.target_url }}</small>
+        </article>
+        {% endfor %}
+    </div>
+</div>
+</body>
+</html>

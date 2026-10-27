@@ -8,10 +8,9 @@ class MenuService:
     def __init__(self):
         self.db = db
         self.collection_name = "menu_items"
-        self._seed_default_data_if_empty()
 
     def _seed_default_data_if_empty(self):
-        docs = self.db.collection(self.collection_name).limit(1).get()
+        docs = self.db.collection(self.collection_name).limit(1).get(retry=None, timeout=4)
         if len(docs) == 0:
             print("ฐานข้อมูลว่างเปล่า! กำลังเพิ่มข้อมูลเมนูอาหารเริ่มต้น...")
             default_items = [
@@ -33,7 +32,10 @@ class MenuService:
             print("เพิ่มข้อมูลเริ่มต้นสำเร็จ!")
 
     def get_all(self) -> list[MenuItem]:
-        docs = self.db.collection(self.collection_name).stream()
+        # Seed only when the menu is requested, so importing the API does not
+        # block backend startup on a Firestore network request.
+        self._seed_default_data_if_empty()
+        docs = self.db.collection(self.collection_name).stream(retry=None, timeout=4)
         items = []
         for doc in docs:
             data = doc.to_dict()
@@ -42,13 +44,14 @@ class MenuService:
                 name=str(data.get("name")),
                 price=float(data.get("price")),
                 image=str(data.get("image")),
-                category=str(data.get("category"))
+                category=str(data.get("category")),
+                available=bool(data.get("available", True)),
             ))
         items.sort(key=lambda x: x.id)
         return items
 
     def get_by_category(self, category: str) -> list[MenuItem]:
-        docs = self.db.collection(self.collection_name).where("category", "==", category).stream()
+        docs = self.db.collection(self.collection_name).where("category", "==", category).stream(retry=None, timeout=4)
         items = []
         for doc in docs:
             data = doc.to_dict()
@@ -57,14 +60,15 @@ class MenuService:
                 name=str(data.get("name")),
                 price=float(data.get("price")),
                 image=str(data.get("image")),
-                category=str(data.get("category"))
+                category=str(data.get("category")),
+                available=bool(data.get("available", True)),
             ))
         items.sort(key=lambda x: x.id)
         return items
 
     def get_by_id(self, item_id: int) -> MenuItem | None:
         doc_ref = self.db.collection(self.collection_name).document(str(item_id))
-        doc = doc_ref.get()
+        doc = doc_ref.get(retry=None, timeout=4)
         if doc.exists:
             data = doc.to_dict()
             return MenuItem(
@@ -72,7 +76,8 @@ class MenuService:
                 name=str(data.get("name")),
                 price=float(data.get("price")),
                 image=str(data.get("image")),
-                category=str(data.get("category"))
+                category=str(data.get("category")),
+                available=bool(data.get("available", True)),
             )
         return None
 
@@ -93,7 +98,14 @@ class MenuService:
 
     def delete_item(self, item_id: int) -> bool:
         doc_ref = self.db.collection(self.collection_name).document(str(item_id))
-        if doc_ref.get().exists:
+        if doc_ref.get(retry=None, timeout=4).exists:
             doc_ref.delete()
             return True
         return False
+
+    def set_availability(self, item_id: int, available: bool) -> bool:
+        doc_ref = self.db.collection(self.collection_name).document(str(item_id))
+        if not doc_ref.get(retry=None, timeout=4).exists:
+            return False
+        doc_ref.update({"available": available})
+        return True

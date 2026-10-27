@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 
 {% block content %}
+{% if table_number %}<p class="table-session-badge">รายการนี้สำหรับโต๊ะ {{ table_number }}</p>{% endif %}
+{% if error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
 <div class="cart-container">
     {% for item in cart_items %}
     <div class="cart-item">
@@ -32,6 +34,13 @@
 
     <div class="cart-summary">
         <p>ยอดรวมทั้งหมด: {{ total }} บาท</p>
+        {% if cart_items %}
+        <form action="/cart/order" method="post" class="place-order-form">
+            <label for="order-table">หมายเลขโต๊ะ (1–30)</label>
+            <input id="order-table" type="number" name="table_number" min="1" max="30" value="{{ table_number or '' }}" required>
+            <button type="submit" class="btn-add">ส่งออเดอร์เข้าครัว</button>
+        </form>
+        {% endif %}
         <form action="/cart/clear" method="post">
             <button type="submit" class="btn-clear">ล้างตะกร้า</button>
         </form>

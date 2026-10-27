@@ -20,6 +20,9 @@ class MenuRouter:
         self.router.add_api_route("/category/{category}", self.show_by_category, methods=["GET"])
 
     async def show_menu(self, request: Request):
+        table_number = request.query_params.get("table")
+        if table_number and table_number.isdigit() and 1 <= int(table_number) <= 30:
+            request.session["table_number"] = int(table_number)
         items = [item.to_dict() for item in await self.menu_service.get_all()]
         categories = await self.menu_service.get_categories()
         return self.template_service.render(
@@ -30,6 +33,8 @@ class MenuRouter:
                 "items": items,
                 "categories": categories,
                 "cart_count": self.cart_service.total_count(request),  # เพิ่มบรรทัดนี้
+                "table_number": request.session.get("table_number"),
+                "ordered": request.query_params.get("ordered") == "1",
             },
         )
 
@@ -44,5 +49,6 @@ class MenuRouter:
                 "items": items,
                 "categories": categories,
                 "cart_count": self.cart_service.total_count(request),  # เพิ่มบรรทัดนี้
+                "table_number": request.session.get("table_number"),
             },
         )

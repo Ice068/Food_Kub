@@ -11,12 +11,34 @@
     <!-- แก้ไข Header: จัดให้อยู่ซ้ายขวา และเพิ่มปุ่ม Logout -->
     <header class="navbar" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 20px;">
         <a href="/admin/" class="logo">🛠️ Admin - จัดการเมนู</a>
-        <a href="/admin/logout" style="color: white; background-color: #333; padding: 8px 15px; text-decoration: none; border-radius: 5px; font-size: 14px;">ออกจากระบบ 🚪</a>
+        <div style="display:flex;gap:8px;align-items:center;">
+            <a href="/admin/dashboard" style="color:white;background-color:#333;padding:8px 15px;text-decoration:none;border-radius:5px;font-size:14px;">📊 แดชบอร์ด</a>
+            <a href="/admin/logout" style="color: white; background-color: #333; padding: 8px 15px; text-decoration: none; border-radius: 5px; font-size: 14px;">ออกจากระบบ 🚪</a>
+        </div>
     </header>
 
     <main class="container">
         <h1>{{ title }}</h1>
 
+        <section class="admin-shortcuts" aria-label="เมนูลัด">
+            <a href="#menu-management" class="shortcut-card"><span>🍲</span><strong>จัดการเมนูอาหาร</strong><small>เพิ่ม ลบ และปรับสถานะเมนู</small></a>
+            <a href="/admin/tables" class="shortcut-card"><span>▦</span><strong>จัดการ QR Code โต๊ะ</strong><small>สร้างและพิมพ์ QR Code</small></a>
+        </section>
+
+        <section class="analytics-section">
+            <div class="section-heading"><div><p class="eyebrow">ภาพรวมการขาย</p><h2>Sales Analytics</h2></div><span class="data-note">รอเชื่อมต่อข้อมูลการชำระเงิน</span></div>
+            <div class="analytics-grid">
+                <article class="analytics-card"><h3>ยอดขายย้อนหลัง 7 วัน</h3><div class="chart-empty"><span>📊</span><p>ยังไม่มีข้อมูลยอดขาย</p><small>เมื่อระบบบันทึกธุรกรรม จะแสดงกราฟที่นี่</small></div></article>
+                <article class="analytics-card"><h3>ยอดขายตามหมวดหมู่</h3><div class="chart-empty"><span>◉</span><p>ยังไม่มีข้อมูลยอดขาย</p><small>กราฟสัดส่วนจะแสดงหลังเชื่อมต่อรายการชำระเงิน</small></div></article>
+            </div>
+        </section>
+
+        <section class="popular-section">
+            <div class="section-heading"><div><p class="eyebrow">เมนูยอดนิยม</p><h2>5 เมนูที่ขายดีที่สุด</h2></div></div>
+            <div class="popular-empty">ยังไม่มีประวัติออเดอร์สำหรับจัดอันดับเมนู</div>
+        </section>
+
+        {% if backend_available %}
         <div class="admin-form">
             <h2>เพิ่มเมนูใหม่</h2>
             <!-- แก้ action ให้มี /admin นำหน้าเพื่อให้ตรงกับ Router -->
@@ -54,7 +76,7 @@
             </form>
         </div>
 
-        <h2>รายการเมนูทั้งหมด</h2>
+        <h2 id="menu-management">รายการเมนูทั้งหมด <span class="stock-hint">เปิด/ปิดเมนูได้ทันที</span></h2>
         <table class="admin-table">
             <thead>
                 <tr>
@@ -63,6 +85,7 @@
                     <th>ชื่อ</th>
                     <th>ราคา</th>
                     <th>หมวดหมู่</th>
+                    <th>สถานะขาย</th>
                     <th>จัดการ</th>
                 </tr>
             </thead>
@@ -70,12 +93,20 @@
                 {% for item in items %}
                 <tr>
                     <td>{{ item.id }}</td>
-                    <td><img src="/static/images/{{ item.image }}" width="60" height="60"
+                    <td><img src="{% if item.image and (item.image.startswith('http://') or item.image.startswith('https://')) %}{{ item.image }}{% else %}/static/images/{{ item.image }}{% endif %}" width="60" height="60"
                              style="object-fit:cover;border-radius:6px;"
                              onerror="this.src='https://placehold.co/60x60'"></td> 
                     <td>{{ item.name }}</td>
                     <td>{{ item.price }} บาท</td>
                     <td>{{ item.category }}</td>
+                    <td>
+                        <form action="/admin/availability/{{ item.id }}" method="post" class="stock-form">
+                            <input type="hidden" name="available" value="{{ 'false' if item.available else 'true' }}">
+                            <button type="submit" class="stock-toggle {{ 'is-available' if item.available else 'is-soldout' }}" aria-label="{{ 'ปิดขาย' if item.available else 'เปิดขาย' }} {{ item.name }}">
+                                <span class="stock-dot"></span>{{ 'พร้อมขาย' if item.available else 'หมดแล้ว' }}
+                            </button>
+                        </form>
+                    </td>
                     <td>
                         <span style="color: gray">แก้ไข (เร็วๆ นี้)</span>
                         <!-- แก้ action ให้มี /admin นำหน้าเพื่อให้ตรงกับ Router -->
@@ -86,11 +117,27 @@
                     </td>
                 </tr>
                 {% else %}
-                <tr><td colspan="6">ยังไม่มีเมนู</td></tr>
+                <tr><td colspan="7">ยังไม่มีเมนู</td></tr>
                 {% endfor %}
             </tbody>
         </table>
+        {% else %}
+        <section class="backend-unavailable" id="menu-management" role="status">
+            <span aria-hidden="true">⚠️</span>
+            <div><h2>ยังโหลดรายการเมนูไม่ได้</h2><p>Backend อาจยังอ่าน Firestore ไม่ได้ โปรดตรวจว่าได้สร้าง Firestore Database ในโปรเจกต์ Firebase เดียวกับ credentials แล้วลองใหม่</p>
+                <a href="/admin/">ลองอีกครั้ง</a> · <a href="/admin/dashboard">กลับไปแดชบอร์ด</a>
+            </div>
+        </section>
+        {% endif %}
     </main>
 </div>
+<script>
+document.querySelectorAll('.stock-toggle').forEach((button) => {
+    button.closest('form').addEventListener('submit', () => {
+        button.disabled = true;
+        button.textContent = 'กำลังบันทึก…';
+    });
+});
+</script>
 </body>
 </html>

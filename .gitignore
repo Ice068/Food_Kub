@@ -10,3 +10,5 @@ venv/
 
 # Project specific
 firebase-credentials.json
+front_py/food_kub.sqlite3*
+blackend_py/menu_items.sqlite3*

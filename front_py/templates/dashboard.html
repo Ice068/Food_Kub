@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} | Food Kub</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <meta http-equiv="refresh" content="30">
+</head>
+<body class="dashboard-body">
+<header class="navbar dashboard-navbar">
+    <a href="/admin/dashboard" class="logo">🍽️ Food Kub <span>แดชบอร์ด</span></a>
+    <nav aria-label="เมนูผู้ดูแล">
+        <a href="/admin/">จัดการเมนู</a>
+        <a href="/admin/tables">QR Code โต๊ะ</a>
+        <a href="/admin/logout">ออกจากระบบ</a>
+    </nav>
+</header>
+
+<main class="dashboard-page">
+    <section class="dashboard-heading">
+        <div><p class="dashboard-kicker">ภาพรวมร้านอาหาร · {{ today }}</p><h1>แดชบอร์ด</h1><p>อัปเดตอัตโนมัติทุก 30 วินาที</p></div>
+        <a class="dashboard-primary" href="/admin/">จัดการเมนู <span aria-hidden="true">→</span></a>
+    </section>
+    {% if error %}<p class="dashboard-alert is-error" role="alert">{{ error }}</p>{% endif %}
+    {% if message %}<p class="dashboard-alert is-success" role="status">{{ message }}</p>{% endif %}
+    {% if not stats_available %}<p class="dashboard-alert is-error" role="status">เชื่อมต่อข้อมูล Firestore ไม่ได้ ตรวจการตั้งค่า Firebase และสถานะ Backend ก่อนใช้ข้อมูลบนแดชบอร์ด</p>{% endif %}
+
+    <section class="dashboard-metrics" aria-label="สถิติภาพรวมวันนี้">
+        <article class="dashboard-metric"><span class="metric-icon">฿</span><div><p>ยอดขายวันนี้</p><strong>฿{{ '{:,.2f}'.format(revenue) }}</strong><small>เมื่อวาน ฿{{ '{:,.2f}'.format(revenue_yesterday) }}</small></div></article>
+        <article class="dashboard-metric"><span class="metric-icon">▤</span><div><p>บิลที่ปิดแล้ว</p><strong>{{ bills }} <small>บิล</small></strong><small>เมื่อวาน {{ bills_yesterday }} บิล</small></div></article>
+        <article class="dashboard-metric"><span class="metric-icon">▦</span><div><p>โต๊ะที่กำลังใช้งาน</p><strong>{{ active_tables }} <small>/ {{ total_tables }} โต๊ะ</small></strong><small>รวมโต๊ะที่รอเคลียร์</small></div></article>
+        <article class="dashboard-metric"><span class="metric-icon">★</span><div><p>เมนูยอดนิยม</p><strong class="metric-dish">{{ top_dish.name if top_dish else 'ยังไม่มีข้อมูล' }}</strong><small>{{ top_dish.qty ~ ' จาน' if top_dish else 'สั่งอาหารเพื่อเริ่มจัดอันดับ' }}</small></div></article>
+    </section>
+
+    <section class="dashboard-charts" aria-label="Sales Analytics">
+        <article class="dashboard-panel">
+            <div class="dashboard-panel-heading"><div><p class="dashboard-kicker">Sales Analytics</p><h2>แนวโน้มยอดขาย 7 วัน</h2></div><span class="panel-tag">รายวัน</span></div>
+            {% if trend_max %}<div class="sales-bars" role="img" aria-label="กราฟยอดขาย 7 วัน">
+                {% for day in trend %}<div class="sales-bar-column"><strong>฿{{ '{:,.0f}'.format(day.total) }}</strong><div class="sales-bar-track"><span style="height:{{ [day.pct, 3] | max }}%"></span></div><small>{{ day.date[5:] }}</small></div>{% endfor %}
+            </div>{% else %}<div class="sales-empty"><span aria-hidden="true">↗</span><strong>ยังไม่มีข้อมูลยอดขาย</strong><p>กราฟจะแสดงเมื่อมีการบันทึกชำระเงิน</p></div>{% endif %}
+        </article>
+        <article class="dashboard-panel">
+            <div class="dashboard-panel-heading"><div><p class="dashboard-kicker">Sales Analytics</p><h2>ยอดขายตามหมวดหมู่วันนี้</h2></div><span class="panel-tag">สัดส่วน</span></div>
+            {% if categories %}<div class="category-bars">{% for category in categories %}<div class="category-bar-row"><div><strong>{{ category.category }}</strong><span>฿{{ '{:,.2f}'.format(category.total) }}</span></div><div class="category-track"><span style="width:{{ category.pct }}%"></span></div></div>{% endfor %}</div>{% else %}<div class="sales-empty"><span aria-hidden="true">◉</span><strong>วันนี้ยังไม่มีรายการขาย</strong><p>สัดส่วนจะคำนวณจากรายการที่ชำระแล้ว</p></div>{% endif %}
+        </article>
+    </section>
+
+    <section class="dashboard-panel live-panel">
+        <div class="dashboard-panel-heading"><div><p class="dashboard-kicker">Live Table &amp; Kitchen Monitor</p><h2>โต๊ะและออเดอร์สด</h2></div><div class="status-legend"><span>🟢 ว่าง</span><span>🟡 กำลังรับประทาน</span><span>🔴 รอชำระ</span><span>✅ ชำระแล้ว</span></div></div>
+        {% if live_tables %}<div class="live-table-grid">
+        {% for table in live_tables %}<article class="live-table-card status-{{ table.status }}">
+            <div class="live-table-title"><h3>โต๊ะ {{ table.table }}</h3><span class="table-state">{{ {'dining':'กำลังรับประทาน','waiting_payment':'รอชำระเงิน','paid':'ชำระแล้ว · รอเคลียร์'}[table.status] }}</span></div>
+            <ul class="live-order-items">{% for item in table['items'] %}<li><div><strong>{{ item.name }}</strong><small>{{ item.qty }} จาน · ฿{{ '{:,.2f}'.format(item.price * item.qty) }}</small></div>
+                {% if table.status != 'paid' %}<form action="/admin/tables/{{ table.table }}/items/{{ item.item_id }}/kitchen" method="post" class="kitchen-form"><select name="status" aria-label="สถานะ {{ item.name }}" onchange="this.form.submit()"><option value="cooking" {% if item.kitchen_status == 'cooking' %}selected{% endif %}>กำลังทำ</option><option value="ready" {% if item.kitchen_status == 'ready' %}selected{% endif %}>พร้อมเสิร์ฟ</option><option value="served" {% if item.kitchen_status == 'served' %}selected{% endif %}>เสิร์ฟแล้ว</option></select></form>{% else %}<span class="served-label">ปิดบิลแล้ว</span>{% endif %}
+            </li>{% endfor %}</ul>
+            <div class="live-table-footer"><strong>รวม ฿{{ '{:,.2f}'.format(table.total) }}</strong>
+                {% if table.status == 'dining' %}<form action="/admin/tables/{{ table.table }}/status" method="post"><input type="hidden" name="status" value="waiting_payment"><button class="table-action" type="submit">เรียกเก็บเงิน</button></form>
+                {% elif table.status == 'waiting_payment' %}<form action="/admin/tables/{{ table.table }}/pay" method="post" class="payment-confirm-form" onsubmit="return confirm('ยืนยันว่าได้รับชำระครบแล้ว?')"><select name="method" aria-label="วิธีชำระ"><option value="cash">เงินสด</option><option value="promptpay_qr">PromptPay QR</option></select><button class="table-action is-pay" type="submit">ยืนยันรับชำระ</button></form>
+                {% else %}<form action="/admin/tables/{{ table.table }}/reset" method="post"><button class="table-action" type="submit">เคลียร์โต๊ะ</button></form>{% endif %}
+            </div>
+        </article>{% endfor %}</div>{% else %}<div class="sales-empty live-empty"><span aria-hidden="true">▦</span><strong>ตอนนี้ทุกโต๊ะว่าง</strong><p>ออเดอร์ใหม่จะแสดงตรงนี้ทันทีที่ลูกค้าส่งรายการ</p></div>{% endif %}
+    </section>
+
+    <section class="dashboard-panel transactions-panel">
+        <div class="dashboard-panel-heading"><div><p class="dashboard-kicker">Recent Transactions</p><h2>ประวัติการชำระเงินล่าสุด</h2></div><span class="panel-tag">{{ transactions | length }} รายการล่าสุด</span></div>
+        <div class="transaction-scroll"><table class="transaction-table"><thead><tr><th>เวลา</th><th>โต๊ะ</th><th>วิธีชำระ</th><th>ยอดรวม</th><th>รูปแบบ</th><th>สถานะ</th></tr></thead><tbody>
+        {% for tx in transactions %}<tr><td>{{ tx.time }}</td><td>โต๊ะ {{ tx.table_number }}</td><td>{{ 'เงินสด' if tx.method == 'cash' else 'PromptPay QR' }}</td><td>฿{{ '{:,.2f}'.format(tx.amount) }}</td><td>{{ 'บิลรวม' if tx.payment_type == 'full' else 'จ่ายแยกรายคน' }}</td><td><span class="paid-badge">ชำระสำเร็จ</span></td></tr>
+        {% else %}<tr><td colspan="6" class="table-empty">ยังไม่มีรายการชำระเงิน</td></tr>{% endfor %}
+        </tbody></table></div>
+    </section>
+
+    <section class="dashboard-bottom">
+        <article class="dashboard-panel popular-panel">
+            <div class="dashboard-panel-heading"><div><p class="dashboard-kicker">เมนูยอดนิยม</p><h2>5 เมนูที่สั่งมากที่สุด</h2></div><a href="/admin/#menu-management" class="text-link">จัดการเมนู →</a></div>
+            {% if popular %}<ol class="popular-list">{% for item in popular %}<li><span class="popular-rank">{{ loop.index }}</span><strong>{{ item.name }}</strong><span>{{ item.qty }} จาน</span></li>{% endfor %}</ol>{% else %}<div class="popular-empty"><span aria-hidden="true">🍲</span><div><strong>ยังไม่มีประวัติออเดอร์</strong><p>เมนูที่ลูกค้าสั่งจะแสดงตรงนี้</p></div></div>{% endif %}
+        </article>
+        <article class="dashboard-panel stock-panel">
+            <div class="dashboard-panel-heading"><div><p class="dashboard-kicker">Menu Stock Control</p><h2>สถานะเมนู</h2></div><a href="/admin/#menu-management" class="text-link">เปิดหน้าจัดการ →</a></div>
+            <div class="stock-summary"><div><span class="stock-indicator is-ready"></span><span>พร้อมขาย</span><strong>{{ available_count if inventory_available else '—' }}</strong></div><div><span class="stock-indicator is-soldout"></span><span>ของหมด</span><strong>{{ sold_out_count if inventory_available else '—' }}</strong></div></div>
+            <p class="stock-explainer">{{ 'เปลี่ยนสถานะพร้อมขายหรือหมดได้จากหน้าจัดการเมนู' if inventory_available else 'กำลังเชื่อมต่อข้อมูลเมนูจาก Backend' }}</p>
+        </article>
+    </section>
+
+    <section class="dashboard-shortcuts" aria-label="เมนูลัด">
+        <a href="/admin/" class="dashboard-shortcut"><span>🍽️</span><div><strong>จัดการเมนูอาหาร</strong><small>เพิ่มเมนู ลบเมนู และเปิด/ปิดของหมด</small></div><b aria-hidden="true">→</b></a>
+        <a href="/admin/tables" class="dashboard-shortcut"><span>▦</span><div><strong>สร้าง QR Code โต๊ะ</strong><small>กำหนดจำนวนโต๊ะและพิมพ์ QR Code</small></div><b aria-hidden="true">→</b></a>
+    </section>
+</main>
+</body>
+</html>
