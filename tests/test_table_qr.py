@@ -38,6 +38,7 @@ class FakeStatsBackend:
 
     async def sync_live_order(
         self, table, items, status="dining", shared_paid=0,
+        shared_item_ids=None,
         expected_opened_at=None, expected_updated_at=None,
     ):
         if not items:
@@ -49,6 +50,7 @@ class FakeStatsBackend:
             "items": [dict(item) for item in items],
             "status": status,
             "shared_paid": shared_paid,
+            "shared_item_ids": list(shared_item_ids or []),
             "paid": False,
             "opened_at": previous.get("opened_at") or self._stamp(),
             "updated_at": self._stamp(),
@@ -473,6 +475,54 @@ class TableQrTests(unittest.TestCase):
         self.assertIn("70.00", response.text)
         # ตรวจสอบว่าเหลือยอดค้างชำระของโต๊ะ 50.00 บาท
         self.assertIn("50.00", response.text)
+
+    def test_split_bill_independent_payment_methods_cash_and_qr(self):
+        import json
+        import re
+        # เมนู: 1 (ข้าวผัด 50.-), 2 (น้ำเปล่า 20.-)
+        # โต๊ะ 15 สั่ง ข้าวผัด 2 จาน (100.-)
+        self.client.post("/cart/add/1?table=15")
+        self.client.post("/cart/update/1?table=15", data={"quantity": 2})
+
+        # ลูกค้าคนที่ 1 ขอจ่าย ข้าวผัด 1 จาน (50.-) ด้วยเงินสด (cash)
+        resp1 = self.pay(15, **{
+            "method": "cash",
+            "split_mode": "split",
+            "selected_items": json.dumps({"1": 1}),
+            "shared_amount": "0.0",
+            "shared_note": "",
+            "shared_item_ids": json.dumps([]),
+        })
+        self.assertEqual(resp1.status_code, 200)
+        self.assertIn("50.00", resp1.text)
+
+        # ลูกค้าคนที่ 2 ใช้เครื่อง/session แยก (other) เปิดหน้า checkout ของโต๊ะ 15
+        other = TestClient(self.app)
+        checkout_page = other.get("/checkout?table=15")
+        # ต้องเปิดได้ปกติ ไม่ติด error 400 "ยอดของกลางไม่สอดคล้องกัน"
+        self.assertEqual(checkout_page.status_code, 200)
+        self.assertNotIn("ยอดของกลางไม่สอดคล้องกัน", checkout_page.text)
+        self.assertIn("50.00", checkout_page.text)
+
+        # ลูกค้าคนที่ 2 สามารถเลือกจ่ายวิธีอื่นได้ เช่น qr_bank (สแกน QR)
+        match = re.search(r'name="payment_token"\s+value="([^"]+)"', checkout_page.text)
+        token2 = match.group(1) if match else ""
+        self.assertTrue(token2)
+
+        resp2 = other.post(
+            "/checkout/pay?table=15",
+            data={
+                "method": "qr_bank",
+                "split_mode": "full",
+                "payment_token": token2,
+                "selected_items": "{}",
+                "shared_amount": "0.00",
+                "shared_note": "",
+                "shared_item_ids": "[]",
+            },
+        )
+        self.assertEqual(resp2.status_code, 200)
+        self.assertIn("ยืนยันการชำระเงินแล้ว", resp2.text)
 
 
 if __name__ == "__main__":

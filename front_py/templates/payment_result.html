@@ -390,7 +390,7 @@
 {% endif %}
 
 <!-- ตรวจสถานะเบื้องหลัง แทน meta refresh -->
-{% if not confirmed and table_id|default(none) %}
+{% if not confirmed and not error and table_id|default(none) %}
 <p
     id="payment-status-live"
     role="status"

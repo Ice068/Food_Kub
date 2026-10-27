@@ -68,15 +68,26 @@ async def set_table_context(
         request.session.pop(generation_key, None)
 
     # ใช้รายการในบิลที่ Backend เก็บไว้
+    live_dict = live or {}
+    backend_shared_ids = {
+        int(x) for x in live_dict.get("shared_item_ids", [])
+    }
+    existing_state = CartService.TABLE_STATE.get(str(table), {})
+    preserved_shared_ids = (
+        backend_shared_ids
+        or set(existing_state.get("shared_item_ids", []))
+        or set(request.session.get(f"{CartService.SHARED_ITEMS_KEY}_table_{table}", []))
+    )
+
     CartService.TABLE_STATE[str(table)] = {
         "orders": {
             str(item["id"]): item["qty"]
-            for item in (live or {}).get("items", [])
+            for item in live_dict.get("items", [])
         },
         "shared_paid": float(
-            (live or {}).get("shared_paid", 0)
+            live_dict.get("shared_paid", 0)
         ),
-        "shared_item_ids": set(),
+        "shared_item_ids": preserved_shared_ids,
     }
 
     # ป้องกันแก้ตะกร้าระหว่างเก็บเงินหรือหลังจ่ายครบ

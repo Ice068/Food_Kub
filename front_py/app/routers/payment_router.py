@@ -411,6 +411,9 @@ class PaymentRouter:
             shared_paid=self.cart_service.get_shared_paid(
                 request
             ),
+            shared_item_ids=list(
+                self.cart_service.get_shared_item_ids(request)
+            ),
             expected_opened_at=current_live.get("opened_at"),
             expected_updated_at=current_live.get("updated_at"),
         )
@@ -1152,6 +1155,9 @@ class PaymentRouter:
             shared_paid=self.cart_service.get_shared_paid(
                 request
             ),
+            shared_item_ids=list(
+                self.cart_service.get_shared_item_ids(request)
+            ),
             expected_opened_at=live.get("opened_at"),
             expected_updated_at=None,
         )
@@ -1365,11 +1371,7 @@ class PaymentRouter:
             Decimal(0),
         )
 
-        if paid > shared_cost:
-            raise ValueError(
-                "ยอดของกลางไม่สอดคล้องกัน "
-                "กรุณาติดต่อพนักงาน"
-            )
+        paid = min(paid, shared_cost)
 
         gross = sum(
             (

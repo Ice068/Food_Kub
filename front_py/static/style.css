@@ -366,6 +366,13 @@ h1 {
     background: #f6fbf7;
 }
 
+.payment-option:has(input:checked) {
+    border-color: #2b8a3e;
+    background: #eefbf1;
+    font-weight: 600;
+    box-shadow: 0 0 0 1px #2b8a3e;
+}
+
 .checkout-actions {
     display: flex;
     align-items: center;

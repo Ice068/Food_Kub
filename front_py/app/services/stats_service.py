@@ -104,6 +104,7 @@ class StatsService:
             "waiting_payment",
         ] | None = None,
         shared_paid: float = 0,
+        shared_item_ids: list[int] | None = None,
         expected_opened_at: str | None = None,
         expected_updated_at: str | None = None,
     ) -> bool:
@@ -123,6 +124,9 @@ class StatsService:
             "expected_opened_at": expected_opened_at,
             "expected_updated_at": expected_updated_at,
         }
+
+        if shared_item_ids is not None:
+            payload["shared_item_ids"] = shared_item_ids
 
         if status is not None:
             payload["status"] = status

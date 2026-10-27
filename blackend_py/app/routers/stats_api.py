@@ -59,6 +59,7 @@ class LiveOrderPayload(BaseModel):
     items: list[Line]
     status: Literal["dining", "waiting_payment"] | None = None
     shared_paid: float = Field(0, ge=0)
+    shared_item_ids: list[int] = Field(default_factory=list)
     expected_opened_at: str | None = None
     expected_updated_at: str | None = None
 
@@ -162,6 +163,7 @@ async def set_live_order(
             [item.model_dump() for item in payload.items],
             payload.status,
             payload.shared_paid,
+            payload.shared_item_ids,
             payload.expected_opened_at,
             payload.expected_updated_at,
         )

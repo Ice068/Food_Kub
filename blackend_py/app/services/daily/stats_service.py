@@ -34,6 +34,7 @@ class LiveOrderUpdate:
     shared_paid: float
     expected_opened_at: str | None
     expected_updated_at: str | None
+    shared_item_ids: list[int] = ()
 
 
 @dataclass(frozen=True)
@@ -116,6 +117,7 @@ class StatsService:
         items: list[dict],
         status: str | None = None,
         shared_paid: float = 0,
+        shared_item_ids: list[int] | None = None,
         expected_opened_at: str | None = None,
         expected_updated_at: str | None = None,
     ) -> None:
@@ -140,6 +142,7 @@ class StatsService:
             shared_paid=shared_paid,
             expected_opened_at=expected_opened_at,
             expected_updated_at=expected_updated_at,
+            shared_item_ids=list(shared_item_ids or []),
         )
 
         @transactional
@@ -196,10 +199,17 @@ class StatsService:
 
         now = _now().isoformat()
 
+        persisted_shared_ids = (
+            list(order.shared_item_ids)
+            if order.shared_item_ids
+            else previous.get("shared_item_ids", [])
+        )
+
         transaction.set(ref, {
             "table": order.table,
             "items": merged,
             "shared_paid": order.shared_paid,
+            "shared_item_ids": persisted_shared_ids,
             "status": (
                 order.status
                 or previous.get("status", "dining")
@@ -303,6 +313,7 @@ class StatsService:
                 "paid": True,
                 "opened_at": previous.get("opened_at") or now,
                 "updated_at": now,
+                "shared_item_ids": [],
             })
 
         save(self.db.transaction())
@@ -545,6 +556,7 @@ class StatsService:
             "payment_amount": float(amount),
             "payment_method": payment.method,
             "shared_paid": 0,
+            "shared_item_ids": [],
         })
 
         return {
@@ -882,6 +894,7 @@ class StatsService:
                     for item in items
                 ),
                 "shared_paid": shared_paid,
+                "shared_item_ids": data.get("shared_item_ids", []),
                 "paid_amount": paid_amount,
                 "opened_at": data.get("opened_at"),
             })
