@@ -1,0 +1,34 @@
+{% macro food_card(item) %}
+<article class="menu-card">
+    <div class="menu-card-image">
+        {% if item.image_url %}
+        <img
+            src="{{ item.image_url }}"
+            alt="{{ item.name }}"
+            loading="lazy"
+        >
+        {% else %}
+        <div
+            class="food-placeholder"
+            role="img"
+            aria-label="ไม่มีรูปอาหาร"
+        >🍽️</div>
+        {% endif %}
+    </div>
+
+    <div class="menu-card-body">
+        <h3>{{ item.name }}</h3>
+        <p class="food-category">{{ item.category }}</p>
+
+        <p class="menu-price">
+            {{ '%.2f'|format(item.price) }} บาท
+        </p>
+
+        <form action="/cart/add/{{ item.id }}{{ table_query }}" method="post">
+            <button type="submit" class="btn-add">
+                เพิ่มลงตะกร้า
+            </button>
+        </form>
+    </div>
+</article>
+{% endmacro %}

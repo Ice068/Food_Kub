@@ -1,0 +1,532 @@
+{
+  "data": [
+    {
+      "TaskID": 1,
+      "TaskName": "Food_Kub — แผนพัฒนาระบบเมนูอาหาร (ประมาณการ)",
+      "StartDate": "2026-09-07T01:00:00.000Z",
+      "EndDate": "2026-10-26T10:00:00.000Z",
+      "Duration": 36,
+      "Predecessor": null,
+      "resources": [],
+      "Progress": 0,
+      "color": "",
+      "info": "<p>แผนตัวอย่าง 7 กันยายน–26 ตุลาคม 2026 (36 วันทำงาน) จันทร์–ศุกร์ 08:00–17:00 ไม่หักวันหยุดนักขัตฤกษ์ อ้างอิงโครงสร้างโค้ด Food_Kub ตั้ง Progress เป็น 0 สำหรับแผน ไม่ใช่การประเมินงานจริง ขอบเขต: เมนู ตะกร้า Admin Firestore และอัปโหลดรูป ไม่รวมการสั่งซื้อจริง ชำระเงิน หรือระบบสมาชิก</p>",
+      "DurationUnit": "day",
+      "subtasks": [
+        {
+          "TaskID": 2,
+          "TaskName": "วิเคราะห์ความต้องการและขอบเขตระบบ",
+          "StartDate": "2026-09-07T01:00:00.000Z",
+          "EndDate": "2026-09-08T10:00:00.000Z",
+          "Duration": 2,
+          "Predecessor": "",
+          "resources": [
+            {
+              "resourceId": "ทีมโครงการ",
+              "unit": 100,
+              "resourceName": "ทีมโครงการ"
+            }
+          ],
+          "Progress": 0,
+          "color": "",
+          "info": "<p>กำหนดเมนู หมวดหมู่ ตะกร้า และ Admin</p><p>แผนประมาณการ ไม่ใช่สถานะหรือวันที่ทำงานจริง</p>",
+          "DurationUnit": "day"
+        },
+        {
+          "TaskID": 3,
+          "TaskName": "ออกแบบหน้าจอและเส้นทางใช้งาน",
+          "StartDate": "2026-09-09T01:00:00.000Z",
+          "EndDate": "2026-09-11T10:00:00.000Z",
+          "Duration": 3,
+          "Predecessor": "2FS",
+          "resources": [
+            {
+              "resourceId": "Frontend",
+              "unit": 100,
+              "resourceName": "Frontend"
+            }
+          ],
+          "Progress": 0,
+          "color": "211",
+          "info": "<p>หน้าเมนู ตะกร้า และจัดการเมนู</p><p>แผนประมาณการ ไม่ใช่สถานะหรือวันที่ทำงานจริง</p>",
+          "DurationUnit": "day"
+        },
+        {
+          "TaskID": 4,
+          "TaskName": "ออกแบบข้อมูล MenuItem และ API",
+          "StartDate": "2026-09-09T01:00:00.000Z",
+          "EndDate": "2026-09-11T10:00:00.000Z",
+          "Duration": 3,
+          "Predecessor": "2FS",
+          "resources": [
+            {
+              "resourceId": "Backend",
+              "unit": 100,
+              "resourceName": "Backend"
+            }
+          ],
+          "Progress": 0,
+          "color": "165",
+          "info": "<p>id name price image category และสัญญา API</p><p>แผนประมาณการ ไม่ใช่สถานะหรือวันที่ทำงานจริง</p>",
+          "DurationUnit": "day"
+        },
+        {
+          "TaskID": 5,
+          "TaskName": "อนุมัติแบบระบบ",
+          "StartDate": "2026-09-11T10:00:00.000Z",
+          "EndDate": "2026-09-11T10:00:00.000Z",
+          "Duration": 0,
+          "Predecessor": "3FS,4FS",
+          "resources": [
+            {
+              "resourceId": "ทีมโครงการ",
+              "unit": 100,
+              "resourceName": "ทีมโครงการ"
+            }
+          ],
+          "Progress": 0,
+          "color": "",
+          "info": "<p>จุดตรวจรับแบบก่อนพัฒนา</p><p>แผนประมาณการ ไม่ใช่สถานะหรือวันที่ทำงานจริง</p>",
+          "DurationUnit": "day"
+        },
+        {
+          "TaskID": 6,
+          "TaskName": "ตั้งโครงสร้าง FastAPI และการตั้งค่า",
+          "StartDate": "2026-09-14T01:00:00.000Z",
+          "EndDate": "2026-09-15T10:00:00.000Z",
+          "Duration": 2,
+          "Predecessor": "5FS",
+          "resources": [
+            {
+              "resourceId": "Backend",
+              "unit": 100,
+              "resourceName": "Backend"
+            }
+          ],
+          "Progress": 0,
+          "color": "165",
+          "info": "<p>แยก front_py และ blackend_py พร้อม routers services models core</p><p>แผนประมาณการ ไม่ใช่สถานะหรือวันที่ทำงานจริง</p>",
+          "DurationUnit": "day"
+        },
+        {
+          "TaskID": 7,
+          "TaskName": "เชื่อม Firebase Firestore และข้อมูลตั้งต้น",
+          "StartDate": "2026-09-16T01:00:00.000Z",
+          "EndDate": "2026-09-18T10:00:00.000Z",
+          "Duration": 3,
+          "Predecessor": "6FS",
+          "resources": [
+            {
+              "resourceId": "Backend",
+              "unit": 100,
+              "resourceName": "Backend"
+            }
+          ],
+          "Progress": 0,
+          "color": "165",
+          "info": "<p>collection menu_items และเมนูตัวอย่าง 12 รายการ</p><p>แผนประมาณการ ไม่ใช่สถานะหรือวันที่ทำงานจริง</p>",
+          "DurationUnit": "day"
+        },
+        {
+          "TaskID": 8,
+          "TaskName": "พัฒนา API อ่านเมนูและหมวดหมู่",
+          "StartDate": "2026-09-21T01:00:00.000Z",
+          "EndDate": "2026-09-23T10:00:00.000Z",
+          "Duration": 3,
+          "Predecessor": "7FS",
+          "resources": [
+            {
+              "resourceId": "Backend",
+              "unit": 100,
+              "resourceName": "Backend"
+            }
+          ],
+          "Progress": 0,
+          "color": "165",
+          "info": "<p>รายการทั้งหมด รายหมวดหมู่ และราย ID</p><p>แผนประมาณการ ไม่ใช่สถานะหรือวันที่ทำงานจริง</p>",
+          "DurationUnit": "day"
+        },
+        {
+          "TaskID": 9,
+          "TaskName": "พัฒนา API เพิ่มและลบเมนู",
+          "StartDate": "2026-09-24T01:00:00.000Z",
+          "EndDate": "2026-09-25T10:00:00.000Z",
+          "Duration": 2,
+          "Predecessor": "8FS",
+          "resources": [
+            {
+              "resourceId": "Backend",
+              "unit": 100,
+              "resourceName": "Backend"
+            }
+          ],
+          "Progress": 0,
+          "color": "165",
+          "info": "<p>ตรวจข้อมูลคำขอและตอบข้อผิดพลาด</p><p>แผนประมาณการ ไม่ใช่สถานะหรือวันที่ทำงานจริง</p>",
+          "DurationUnit": "day"
+        },
+        {
+          "TaskID": 10,
+          "TaskName": "สร้าง Jinja2 layout และ CSS",
+          "StartDate": "2026-09-16T01:00:00.000Z",
+          "EndDate": "2026-09-18T10:00:00.000Z",
+          "Duration": 3,
+          "Predecessor": "6FS",
+          "resources": [
+            {
+              "resourceId": "Frontend",
+              "unit": 100,
+              "resourceName": "Frontend"
+            }
+          ],
+          "Progress": 0,
+          "color": "211",
+          "info": "<p>base.html navigation และรูปแบบหน้าจอ</p><p>แผนประมาณการ ไม่ใช่สถานะหรือวันที่ทำงานจริง</p>",
+          "DurationUnit": "day"
+        },
+        {
+          "TaskID": 11,
+          "TaskName": "พัฒนาหน้าเมนูและตัวกรองหมวดหมู่",
+          "StartDate": "2026-09-21T01:00:00.000Z",
+          "EndDate": "2026-09-23T10:00:00.000Z",
+          "Duration": 3,
+          "Predecessor": "10FS",
+          "resources": [
+            {
+              "resourceId": "Frontend",
+              "unit": 100,
+              "resourceName": "Frontend"
+            }
+          ],
+          "Progress": 0,
+          "color": "211",
+          "info": "<p>สร้าง UI โดยอิง API contract ก่อนเชื่อมข้อมูลจริง</p><p>แผนประมาณการ ไม่ใช่สถานะหรือวันที่ทำงานจริง</p>",
+          "DurationUnit": "day"
+        },
+        {
+          "TaskID": 12,
+          "TaskName": "พัฒนาตะกร้า session และคำนวณยอดรวม",
+          "StartDate": "2026-09-24T01:00:00.000Z",
+          "EndDate": "2026-09-29T10:00:00.000Z",
+          "Duration": 4,
+          "Predecessor": "11FS",
+          "resources": [
+            {
+              "resourceId": "Frontend",
+              "unit": 100,
+              "resourceName": "Frontend"
+            }
+          ],
+          "Progress": 0,
+          "color": "211",
+          "info": "<p>เพิ่ม ปรับจำนวน ลบ ล้าง และรวมราคา</p><p>แผนประมาณการ ไม่ใช่สถานะหรือวันที่ทำงานจริง</p>",
+          "DurationUnit": "day"
+        },
+        {
+          "TaskID": 13,
+          "TaskName": "พัฒนาหน้า Admin เพิ่มและลบเมนู",
+          "StartDate": "2026-09-30T01:00:00.000Z",
+          "EndDate": "2026-10-01T10:00:00.000Z",
+          "Duration": 2,
+          "Predecessor": "12FS,9FS",
+          "resources": [
+            {
+              "resourceId": "Frontend",
+              "unit": 100,
+              "resourceName": "Frontend"
+            }
+          ],
+          "Progress": 0,
+          "color": "211",
+          "info": "<p>ฟอร์มชื่อ ราคา หมวดหมู่ และรูปภาพ</p><p>แผนประมาณการ ไม่ใช่สถานะหรือวันที่ทำงานจริง</p>",
+          "DurationUnit": "day"
+        },
+        {
+          "TaskID": 14,
+          "TaskName": "พัฒนาอัปโหลดรูปและบันทึกสำรองในเครื่อง",
+          "StartDate": "2026-09-28T01:00:00.000Z",
+          "EndDate": "2026-09-29T10:00:00.000Z",
+          "Duration": 2,
+          "Predecessor": "9FS",
+          "resources": [
+            {
+              "resourceId": "Backend",
+              "unit": 100,
+              "resourceName": "Backend"
+            }
+          ],
+          "Progress": 0,
+          "color": "165",
+          "info": "<p>Catbox และ fallback static/images</p><p>แผนประมาณการ ไม่ใช่สถานะหรือวันที่ทำงานจริง</p>",
+          "DurationUnit": "day"
+        },
+        {
+          "TaskID": 15,
+          "TaskName": "เชื่อม Frontend กับ Backend ผ่าน httpx",
+          "StartDate": "2026-10-02T01:00:00.000Z",
+          "EndDate": "2026-10-02T10:00:00.000Z",
+          "Duration": 1,
+          "Predecessor": "13FS,14FS,8FS",
+          "resources": [
+            {
+              "resourceId": "ทีมโครงการ",
+              "unit": 100,
+              "resourceName": "ทีมโครงการ"
+            }
+          ],
+          "Progress": 0,
+          "color": "",
+          "info": "<p>ตั้ง BACKEND_URL และตรวจ flow ทุกหน้า</p><p>แผนประมาณการ ไม่ใช่สถานะหรือวันที่ทำงานจริง</p>",
+          "DurationUnit": "day"
+        },
+        {
+          "TaskID": 16,
+          "TaskName": "ฟีเจอร์หลักพร้อมทดสอบ",
+          "StartDate": "2026-10-02T10:00:00.000Z",
+          "EndDate": "2026-10-02T10:00:00.000Z",
+          "Duration": 0,
+          "Predecessor": "15FS",
+          "resources": [
+            {
+              "resourceId": "ทีมโครงการ",
+              "unit": 100,
+              "resourceName": "ทีมโครงการ"
+            }
+          ],
+          "Progress": 0,
+          "color": "",
+          "info": "<p>เมนู ตะกร้า Admin และรูปภาพเชื่อมครบ</p><p>แผนประมาณการ ไม่ใช่สถานะหรือวันที่ทำงานจริง</p>",
+          "DurationUnit": "day"
+        },
+        {
+          "TaskID": 17,
+          "TaskName": "ทดสอบเมนู หมวดหมู่ และ API",
+          "StartDate": "2026-10-05T01:00:00.000Z",
+          "EndDate": "2026-10-07T10:00:00.000Z",
+          "Duration": 3,
+          "Predecessor": "16FS",
+          "resources": [
+            {
+              "resourceId": "Backend",
+              "unit": 100,
+              "resourceName": "Backend"
+            }
+          ],
+          "Progress": 0,
+          "color": "165",
+          "info": "<p>ตรวจข้อมูล เมนูไม่พบ และเพิ่มลบรายการ</p><p>แผนประมาณการ ไม่ใช่สถานะหรือวันที่ทำงานจริง</p>",
+          "DurationUnit": "day"
+        },
+        {
+          "TaskID": 18,
+          "TaskName": "ทดสอบตะกร้าและการแสดงผล",
+          "StartDate": "2026-10-05T01:00:00.000Z",
+          "EndDate": "2026-10-07T10:00:00.000Z",
+          "Duration": 3,
+          "Predecessor": "16FS",
+          "resources": [
+            {
+              "resourceId": "Frontend",
+              "unit": 100,
+              "resourceName": "Frontend"
+            }
+          ],
+          "Progress": 0,
+          "color": "211",
+          "info": "<p>จำนวนศูนย์ ยอดรวม session แยกผู้ใช้ และหน้าจอมือถือ</p><p>แผนประมาณการ ไม่ใช่สถานะหรือวันที่ทำงานจริง</p>",
+          "DurationUnit": "day"
+        },
+        {
+          "TaskID": 19,
+          "TaskName": "ทดสอบ Admin รูปภาพ และระบบร่วมกัน",
+          "StartDate": "2026-10-08T01:00:00.000Z",
+          "EndDate": "2026-10-12T10:00:00.000Z",
+          "Duration": 3,
+          "Predecessor": "17FS,18FS",
+          "resources": [
+            {
+              "resourceId": "ทีมโครงการ",
+              "unit": 100,
+              "resourceName": "ทีมโครงการ"
+            }
+          ],
+          "Progress": 0,
+          "color": "",
+          "info": "<p>ทดสอบตั้งแต่เพิ่มเมนูจนแสดงผลและลบ รวมกรณีอัปโหลดล้มเหลว</p><p>แผนประมาณการ ไม่ใช่สถานะหรือวันที่ทำงานจริง</p>",
+          "DurationUnit": "day"
+        },
+        {
+          "TaskID": 20,
+          "TaskName": "แก้ข้อบกพร่องและทดสอบซ้ำ",
+          "StartDate": "2026-10-13T01:00:00.000Z",
+          "EndDate": "2026-10-19T10:00:00.000Z",
+          "Duration": 5,
+          "Predecessor": "19FS",
+          "resources": [
+            {
+              "resourceId": "ทีมโครงการ",
+              "unit": 100,
+              "resourceName": "ทีมโครงการ"
+            }
+          ],
+          "Progress": 0,
+          "color": "",
+          "info": "<p>แก้ปัญหาจากการทดสอบและตรวจเส้นทางใช้งานหลัก</p><p>แผนประมาณการ ไม่ใช่สถานะหรือวันที่ทำงานจริง</p>",
+          "DurationUnit": "day"
+        },
+        {
+          "TaskID": 21,
+          "TaskName": "จัดทำคู่มือติดตั้งและใช้งาน",
+          "StartDate": "2026-10-20T01:00:00.000Z",
+          "EndDate": "2026-10-22T10:00:00.000Z",
+          "Duration": 3,
+          "Predecessor": "20FS",
+          "resources": [
+            {
+              "resourceId": "ทีมโครงการ",
+              "unit": 100,
+              "resourceName": "ทีมโครงการ"
+            }
+          ],
+          "Progress": 0,
+          "color": "",
+          "info": "<p>อัปเดต README ให้ตรง Firestore ระบุ credentials และพอร์ตทั้งสองบริการ</p><p>แผนประมาณการ ไม่ใช่สถานะหรือวันที่ทำงานจริง</p>",
+          "DurationUnit": "day"
+        },
+        {
+          "TaskID": 22,
+          "TaskName": "ตรวจรับและเตรียมสาธิต",
+          "StartDate": "2026-10-23T01:00:00.000Z",
+          "EndDate": "2026-10-26T10:00:00.000Z",
+          "Duration": 2,
+          "Predecessor": "21FS",
+          "resources": [
+            {
+              "resourceId": "ทีมโครงการ",
+              "unit": 100,
+              "resourceName": "ทีมโครงการ"
+            }
+          ],
+          "Progress": 0,
+          "color": "",
+          "info": "<p>ตรวจขอบเขตและจัดเตรียมข้อมูลสาธิต</p><p>แผนประมาณการ ไม่ใช่สถานะหรือวันที่ทำงานจริง</p>",
+          "DurationUnit": "day"
+        },
+        {
+          "TaskID": 23,
+          "TaskName": "ส่งมอบ Food_Kub",
+          "StartDate": "2026-10-26T10:00:00.000Z",
+          "EndDate": "2026-10-26T10:00:00.000Z",
+          "Duration": 0,
+          "Predecessor": "22FS",
+          "resources": [
+            {
+              "resourceId": "ทีมโครงการ",
+              "unit": 100,
+              "resourceName": "ทีมโครงการ"
+            }
+          ],
+          "Progress": 0,
+          "color": "",
+          "info": "<p>ส่งโค้ด คู่มือ และสาธิตระบบตามขอบเขต</p><p>แผนประมาณการ ไม่ใช่สถานะหรือวันที่ทำงานจริง</p>",
+          "DurationUnit": "day"
+        }
+      ]
+    }
+  ],
+  "resources": [
+    {
+      "resourceName": "ทีมโครงการ",
+      "resourceId": "ทีมโครงการ"
+    },
+    {
+      "resourceName": "Frontend",
+      "resourceId": "Frontend"
+    },
+    {
+      "resourceName": "Backend",
+      "resourceId": "Backend"
+    }
+  ],
+  "projectStartDate": null,
+  "projectEndDate": null,
+  "advanced": {
+    "columns": [
+      {
+        "name": "Task ID",
+        "width": "70",
+        "show": true
+      },
+      {
+        "name": "Task Name",
+        "width": "350",
+        "show": true
+      },
+      {
+        "name": "Start Date",
+        "width": "130",
+        "show": false
+      },
+      {
+        "name": "End Date",
+        "width": "130",
+        "show": false
+      },
+      {
+        "name": "Duration",
+        "width": "130",
+        "show": false
+      },
+      {
+        "name": "Progress %",
+        "width": "150",
+        "show": false
+      },
+      {
+        "name": "Dependency",
+        "width": "150",
+        "show": false
+      },
+      {
+        "name": "Resources",
+        "width": "200",
+        "show": false
+      },
+      {
+        "name": "Color",
+        "width": "100",
+        "show": false
+      },
+      {
+        "name": "Notes",
+        "width": "200",
+        "show": false
+      }
+    ],
+    "zoomLevel": 0,
+    "timezone": "Asia/Bangkok",
+    "timezoneOffset": -420,
+    "dependencyConflict": "Add Offset to Dependency",
+    "dateFormat": "yyyy-MM-dd",
+    "timeFormat": "HH:mm",
+    "firstDayOfWeek": 0,
+    "workWeek": [
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday"
+    ],
+    "workTime": [
+      {
+        "from": 8,
+        "to": 12
+      },
+      {
+        "from": 13,
+        "to": 17
+      }
+    ],
+    "holidays": []
+  }
+}
