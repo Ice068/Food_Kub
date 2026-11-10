@@ -102,5 +102,5 @@ class QrBankPaymentStrategy(PaymentStrategy):
 
         img = qr.make_image(fill_color="black", back_color="white")
         buffer = io.BytesIO()
-        img.save(buffer, format="PNG")
+        img.save(buffer)
         return base64.b64encode(buffer.getvalue()).decode("ascii")
