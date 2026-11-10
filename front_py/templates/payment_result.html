@@ -1,0 +1,493 @@
+{% extends "base.html" %}
+
+{% block extra_head %}
+<style>
+    output.pending-banner,
+    output.fully-paid-banner,
+    output.remaining-banner {
+        display: block;
+    }
+
+    .split-summary-box {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 10px;
+        padding: 16px;
+        margin: 16px 0;
+        text-align: left;
+    }
+
+    .split-summary-box h4 {
+        color: #495057;
+        margin-bottom: 8px;
+        font-size: 0.95rem;
+    }
+
+    .paid-item-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        font-size: 0.9rem;
+        padding: 4px 0;
+        color: #212529;
+    }
+
+    .remaining-banner {
+        background: #e7f5ff;
+        border: 1px solid #74c0fc;
+        color: #1971c2;
+        border-radius: 10px;
+        padding: 14px;
+        margin: 16px 0;
+        font-size: 0.95rem;
+    }
+
+    .fully-paid-banner {
+        background: #ebfbee;
+        border: 1px solid #8ce99a;
+        color: #2b8a3e;
+        border-radius: 10px;
+        padding: 14px;
+        margin: 16px 0;
+        font-size: 1rem;
+        font-weight: bold;
+    }
+
+    .pending-banner {
+        background: #fff9db;
+        border: 1px solid #ffe066;
+        color: #795548;
+        border-radius: 10px;
+        padding: 14px;
+        margin: 16px 0;
+        font-size: 0.95rem;
+        line-height: 1.6;
+    }
+
+    .result-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-top: 18px;
+    }
+
+    .result-actions a {
+        text-decoration: none;
+        text-align: center;
+    }
+
+    .qr-image {
+        display: block;
+        max-width: 260px;
+        width: 100%;
+        height: auto;
+        margin: 16px auto;
+    }
+
+    .qr-hint {
+        font-size: 0.9rem;
+        color: #495057;
+        line-height: 1.6;
+    }
+
+    .payment-success-dialog {
+        position: fixed;
+        inset: 0;
+        width: min(420px, calc(100vw - 32px));
+        box-sizing: border-box;
+        margin: auto;
+        padding: 32px 24px;
+        border: 0;
+        border-radius: 20px;
+        background: #fff;
+        color: #212529;
+        text-align: center;
+        box-shadow: 0 20px 70px rgba(0, 0, 0, 0.2);
+    }
+
+    .payment-success-dialog::backdrop {
+        background: rgba(0, 0, 0, 0.45);
+    }
+
+    .payment-success-icon {
+        display: grid;
+        place-items: center;
+        width: 72px;
+        height: 72px;
+        margin: 0 auto 16px;
+        border-radius: 50%;
+        background: #ebfbee;
+        color: #2b8a3e;
+        font-size: 42px;
+        font-weight: 700;
+    }
+
+    .payment-success-dialog h2 {
+        margin: 0 0 12px;
+        color: #2b8a3e;
+    }
+
+    .payment-success-dialog p {
+        margin: 8px 0;
+        line-height: 1.6;
+    }
+
+    .payment-success-dialog .payment-success-close {
+        display: block;
+        margin-top: 24px;
+        padding: 12px 16px;
+        border-radius: 10px;
+        background: #2b8a3e;
+        color: #fff;
+        font-weight: 600;
+        text-decoration: none;
+    }
+
+    .payment-success-close:focus-visible {
+        outline: 3px solid #212529;
+        outline-offset: 4px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% set confirmed = payment_confirmed|default(false) %}
+
+<div class="result-container">
+    {% if error %}
+    <div class="result-card result-error">
+        <h2>⚠️ ตรวจสอบรายการชำระเงิน</h2>
+
+        <p>{{ error }}</p>
+
+        <div class="result-actions">
+            <a
+                href="/checkout{{ table_query }}"
+                class="btn-checkout"
+            >
+                ตรวจสอบสถานะรายการ
+            </a>
+
+            <a
+                href="/cart{{ table_query }}"
+                class="btn-back"
+            >
+                กลับไปดูบิล
+            </a>
+        </div>
+    </div>
+
+    {% else %}
+    <div class="result-card">
+        {% if confirmed %}
+        <h2>✅ ยืนยันการชำระเงินแล้ว</h2>
+        {% else %}
+        <h2>⏳ รอยืนยันการชำระเงิน</h2>
+        {% endif %}
+
+        <p>
+            {% if is_split %}
+                👥 แยกชำระส่วนของคุณ
+            {% else %}
+                💳 ชำระทั้งบิล
+            {% endif %}
+        </p>
+
+        <p class="result-method">
+            วิธีชำระเงิน:
+            <strong>{{ result.method_name }}</strong>
+        </p>
+
+        <p class="result-amount">
+            {{ "%.2f"|format(total) }} บาท
+        </p>
+
+        <p class="result-message">
+            {{ result.message }}
+        </p>
+
+        {% if not confirmed %}
+        <output class="pending-banner">
+            รายการนี้ยังอยู่ระหว่างรอยืนยันรับเงิน
+            บิลยังไม่ถูกหักหรือปิด
+
+            <br>
+
+            หากชำระแล้ว กรุณาให้พนักงานตรวจสอบ
+            และอย่าชำระรายการเดิมซ้ำ
+        </output>
+        {% endif %}
+
+        {% if result.qr_image %}
+        <img
+            class="qr-image"
+            src="data:image/png;base64,{{ result.qr_image }}"
+            alt="QR Code พร้อมเพย์สำหรับรายการนี้"
+        >
+
+        <p class="qr-hint">
+            เปิดแอปธนาคารแล้วสแกน QR โค้ดนี้เพื่อทำรายการ
+        </p>
+        {% endif %}
+
+        <div class="split-summary-box">
+            <h4>
+                {% if confirmed %}
+                    📋 รายการที่ยืนยันการชำระแล้ว:
+                {% else %}
+                    📋 รายการในคำขอชำระเงินนี้:
+                {% endif %}
+            </h4>
+
+            {% for it in pay_items %}
+            <div class="paid-item-row">
+                <span>
+                    • {{ it.name }} × {{ it.qty }}
+                </span>
+
+                <strong>
+                    {{ "%.2f"|format(it.price * it.qty) }} ฿
+                </strong>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% if confirmed %}
+            {% if is_fully_paid %}
+            <output class="fully-paid-banner">
+                🎉 ชำระเงินครบทุกรายการแล้ว
+                ระบบปิดบิลเรียบร้อย ขอบคุณครับ!
+            </output>
+
+            <div class="result-actions">
+                <a
+                    href="/{{ table_query }}"
+                    class="btn-checkout"
+                >
+                    กลับไปหน้าเมนู
+                </a>
+            </div>
+
+            {% else %}
+            <output class="remaining-banner">
+                ℹ️ ยอดค้างชำระที่เหลือ:
+
+                <strong>
+                    {{ "%.2f"|format(remaining_total) }} บาท
+                </strong>
+            </output>
+
+            <div class="result-actions">
+                <a
+                    href="/checkout{{ table_query }}"
+                    class="btn-checkout"
+                    style="background: #2b8a3e;"
+                >
+                    ชำระรายการที่เหลือต่อ
+                </a>
+
+                <a
+                    href="/cart{{ table_query }}"
+                    class="btn-back"
+                >
+                    กลับไปดูบิล
+                </a>
+            </div>
+            {% endif %}
+
+        {% else %}
+        <div class="remaining-banner">
+            ยอดค้างชำระของบิลยังคงเป็น
+
+            <strong>
+                {{ "%.2f"|format(remaining_total) }} บาท
+            </strong>
+
+            จนกว่าจะยืนยันรับเงิน
+        </div>
+
+        <div class="result-actions">
+            <a
+                href="/checkout{{ table_query }}"
+                class="btn-checkout"
+            >
+                ตรวจสอบสถานะรายการ
+            </a>
+
+            <a
+                href="/cart{{ table_query }}"
+                class="btn-back"
+            >
+                กลับไปดูบิล
+            </a>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<!-- หน้าต่างแจ้งชำระสำเร็จ -->
+{% if confirmed and is_fully_paid|default(false) and not error|default(false) %}
+<dialog
+    id="payment-success-dialog"
+    class="payment-success-dialog"
+    aria-labelledby="payment-success-title"
+    aria-describedby="payment-success-description"
+>
+    <div class="payment-success-icon" aria-hidden="true">
+        ✓
+    </div>
+
+    <h2 id="payment-success-title">ชำระสำเร็จ</h2>
+
+    <p id="payment-success-description">
+        พนักงานยืนยันการรับเงินเรียบร้อยแล้ว
+    </p>
+
+    {% if table_id|default(none) is not none %}
+    <p>โต๊ะ {{ table_id }}</p>
+    {% endif %}
+
+    <p>
+        <strong>{{ "%.2f"|format(total) }} บาท</strong>
+    </p>
+
+    <p>ขอบคุณที่ใช้บริการครับ</p>
+
+    <a
+        href="/{{ table_query }}"
+        id="payment-success-close"
+        class="payment-success-close"
+        autofocus
+    >
+        ปิดและกลับหน้าเมนู
+    </a>
+</dialog>
+
+<script>
+(() => {
+    const dialog = document.getElementById(
+        "payment-success-dialog"
+    );
+
+    const closeLink = document.getElementById(
+        "payment-success-close"
+    );
+
+    if (!dialog || !closeLink) return;
+
+    dialog.addEventListener("close", () => {
+        window.location.replace(closeLink.href);
+    });
+
+    if (typeof dialog.showModal === "function") {
+        dialog.showModal();
+    } else {
+        dialog.setAttribute("open", "");
+    }
+})();
+</script>
+{% endif %}
+
+<!-- ตรวจสถานะเบื้องหลัง แทน meta refresh -->
+{% if not confirmed and not error and table_id|default(none) %}
+<output
+    id="payment-status-live"
+    aria-live="polite"
+    style="display:block; text-align:center; margin:12px 0;"
+>
+    กำลังรอพนักงานยืนยันรับเงิน
+</output>
+
+<script>
+(() => {
+    const statusUrl = {{ ("/checkout/status?table=" ~ table_id)|tojson }};
+    const checkoutUrl = {{ ("/checkout?table=" ~ table_id)|tojson }};
+
+    const message = document.getElementById(
+        "payment-status-live"
+    );
+
+    let stopped = false;
+    let inFlight = false;
+    let timer;
+    let activeRequest;
+
+    async function checkPayment() {
+        if (stopped || inFlight) return;
+
+        inFlight = true;
+        activeRequest = new AbortController();
+
+        const timeout = setTimeout(
+            () => activeRequest.abort(),
+            8000
+        );
+
+        try {
+            const response = await fetch(statusUrl, {
+                cache: "no-store",
+                credentials: "same-origin",
+                signal: activeRequest.signal
+            });
+
+            if (!response.ok) {
+                throw new Error("Status unavailable");
+            }
+
+            const data = await response.json();
+
+            if (stopped) return;
+
+            if (data.payment_confirmed === true) {
+                stopped = true;
+
+                message.textContent = (
+                    "ยืนยันรับเงินแล้ว กำลังแสดงผลการชำระ"
+                );
+
+                window.location.replace(checkoutUrl);
+                return;
+            }
+
+            message.textContent = (
+                "กำลังรอพนักงานยืนยันรับเงิน"
+            );
+        } catch {
+            if (!stopped) {
+                message.textContent = (
+                    "ยังตรวจสอบสถานะไม่ได้ กำลังลองใหม่ " +
+                    "กรุณาอย่าจ่ายซ้ำ"
+                );
+            }
+        } finally {
+            inFlight = false;
+            clearTimeout(timeout);
+
+            if (!stopped) {
+                timer = setTimeout(
+                    checkPayment,
+                    5000
+                );
+            }
+        }
+    }
+
+    window.addEventListener("pagehide", () => {
+        stopped = true;
+        clearTimeout(timer);
+        activeRequest?.abort();
+    });
+
+    window.addEventListener("pageshow", (event) => {
+        if (event.persisted && stopped) {
+            stopped = false;
+            checkPayment();
+        }
+    });
+
+    checkPayment();
+})();
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,767 @@
+from datetime import datetime, timedelta, timezone
+from typing import Literal
+
+import httpx
+from fastapi import APIRouter, Cookie, Query, Request
+from fastapi.responses import JSONResponse, RedirectResponse
+from pydantic import BaseModel, Field, StrictBool
+
+from app.services.menu_service import MenuService
+from app.services.stats_service import StatsService
+from app.services.template_service import TemplateService
+
+
+TH_TZ = timezone(timedelta(hours=7))
+ADMIN_LOGIN_REQUIRED = "กรุณาเข้าสู่ระบบ Admin"
+
+DAYS_TH = (
+    "จ.", "อ.", "พ.", "พฤ.", "ศ.", "ส.", "อา."
+)
+
+MONTHS_TH = (
+    "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.",
+    "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.",
+    "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค.",
+)
+
+METHODS_TH = {
+    "cash": "เงินสด",
+    "qr_bank": "QR พร้อมเพย์",
+}
+
+
+def baht(value) -> str:
+    value = float(value or 0)
+
+    text = (
+        f"{value:,.0f}"
+        if value == int(value)
+        else f"{value:,.2f}"
+    )
+
+    return "฿" + text
+
+
+def _pct(value: float, maximum: float) -> int:
+    if not maximum or value <= 0:
+        return 0
+
+    return max(3, round(value / maximum * 100))
+
+
+def _trend(change_pct) -> dict:
+    if change_pct is None:
+        return {"kind": "none"}
+
+    if change_pct == 0:
+        return {"kind": "flat"}
+
+    return {
+        "kind": "up" if change_pct > 0 else "down",
+        "value": abs(change_pct),
+    }
+
+
+# ---------- ข้อมูลคำขอ ----------
+
+class AvailabilityPayload(BaseModel):
+    available: StrictBool
+
+
+class KitchenStatusPayload(BaseModel):
+    status: Literal["cooking", "ready", "served"]
+    expected_qty: int = Field(..., gt=0)
+    opened_at: str = Field(..., min_length=1)
+
+
+class ResetTablePayload(BaseModel):
+    opened_at: str = Field(..., min_length=1)
+
+
+class TablePaymentLine(BaseModel):
+    id: int
+    name: str
+    price: float = Field(..., ge=0)
+    qty: int = Field(..., gt=0)
+
+
+class TablePaymentPayload(BaseModel):
+    opened_at: str = Field(..., min_length=1)
+    items: list[TablePaymentLine] = Field(..., min_length=1)
+    method: Literal["cash", "qr_bank"] | None = None
+    expected_total: float = Field(
+        ...,
+        gt=0,
+        allow_inf_nan=False,
+    )
+
+
+class DashboardRouter:
+    """หน้า Dashboard และ JSON API สำหรับ Admin"""
+
+    def __init__(
+        self,
+        stats_service: StatsService,
+        menu_service: MenuService,
+        template_service: TemplateService,
+    ):
+        self.router = APIRouter(prefix="/admin/dashboard")
+
+        self.stats_service = stats_service
+        self.menu_service = menu_service
+        self.template_service = template_service
+
+        self.template_service.templates.env.filters["baht"] = baht
+
+        self.router.add_api_route(
+            "",
+            self.show_dashboard,
+            methods=["GET"],
+        )
+
+        self.router.add_api_route(
+            "/",
+            self.show_dashboard,
+            methods=["GET"],
+            include_in_schema=False,
+        )
+
+        self.router.add_api_route(
+            "/data",
+            self.get_dashboard_data,
+            methods=["GET"],
+        )
+
+        self.router.add_api_route(
+            "/availability/{item_id}",
+            self.set_availability,
+            methods=["POST"],
+        )
+
+        self.router.add_api_route(
+            "/tables/{table}/items/{item_id}/kitchen-status",
+            self.set_kitchen_status,
+            methods=["PUT"],
+        )
+
+        self.router.add_api_route(
+            "/tables/{table}/request-payment",
+            self.request_table_payment,
+            methods=["POST"],
+        )
+
+        self.router.add_api_route(
+            "/tables/{table}/confirm-payment",
+            self.confirm_table_payment,
+            methods=["POST"],
+        )
+
+        self.router.add_api_route(
+            "/tables/{table}/reset",
+            self.reset_table,
+            methods=["POST"],
+        )
+
+    @staticmethod
+    def _is_admin(admin_token: str | None) -> bool:
+        return admin_token == "logged_in"
+
+    @staticmethod
+    def _json(content: dict, status_code: int = 200):
+        return JSONResponse(
+            content=content,
+            status_code=status_code,
+            headers={"Cache-Control": "no-store"},
+        )
+
+    # ---------- หน้า Dashboard ----------
+
+    async def show_dashboard(
+        self,
+        request: Request,
+        show_all: int = Query(0, alias="all"),
+        admin_token: str | None = Cookie(None),
+    ):
+        if not self._is_admin(admin_token):
+            return RedirectResponse(
+                "/admin/login",
+                status_code=303,
+            )
+
+        error = None
+        data = None
+
+        try:
+            data = await self.stats_service.get_dashboard()
+        except httpx.HTTPError:
+            error = (
+                "ติดต่อเซิร์ฟเวอร์หลังบ้านไม่ได้ "
+                "กรุณาตรวจสอบว่า Backend พอร์ต 8000 เปิดอยู่"
+            )
+
+        try:
+            menu = await self.menu_service.get_all()
+        except httpx.HTTPError:
+            menu = []
+
+        context = self._build_view(data, menu)
+
+        context.update({
+            "title": "แดชบอร์ดภาพรวมร้าน",
+            "error": error,
+            "show_all": bool(show_all),
+            "refresh_seconds": 10,
+        })
+
+        response = self.template_service.render(
+            request,
+            "dashboard.html",
+            context,
+        )
+
+        response.headers["Cache-Control"] = "no-store"
+        return response
+
+    # ---------- ข้อมูลสำหรับรีเฟรชหน้า ----------
+
+    async def get_dashboard_data(
+        self,
+        admin_token: str | None = Cookie(None),
+    ):
+        if not self._is_admin(admin_token):
+            return self._json(
+                {"error": ADMIN_LOGIN_REQUIRED},
+                401,
+            )
+
+        try:
+            data = await self.stats_service.get_dashboard()
+            menu = await self.menu_service.get_all()
+
+            data["menu"] = [
+                {
+                    "id": item.id,
+                    "name": item.name,
+                    "category": item.category,
+                    "price": item.price,
+                    "available": getattr(
+                        item,
+                        "available",
+                        True,
+                    ),
+                }
+                for item in menu
+            ]
+
+            return self._json(data)
+
+        except httpx.HTTPError:
+            return self._json(
+                {
+                    "error": (
+                        "ติดต่อ Backend ไม่ได้ "
+                        "กรุณาตรวจสอบพอร์ต 8000"
+                    )
+                },
+                503,
+            )
+
+    # ---------- เปิด/ปิดขายเมนู ----------
+
+    async def set_availability(
+        self,
+        item_id: int,
+        payload: AvailabilityPayload,
+        admin_token: str | None = Cookie(None),
+    ):
+        if not self._is_admin(admin_token):
+            return self._json(
+                {"error": ADMIN_LOGIN_REQUIRED},
+                401,
+            )
+
+        try:
+            updated = await self.stats_service.set_availability(
+                item_id,
+                payload.available,
+            )
+
+            if not updated:
+                return self._json(
+                    {"error": "ไม่พบเมนูนี้"},
+                    404,
+                )
+
+            return self._json({
+                "status": "success",
+                "id": item_id,
+                "available": payload.available,
+            })
+
+        except httpx.HTTPError:
+            return self._json(
+                {"error": "บันทึกสถานะเมนูไม่สำเร็จ"},
+                503,
+            )
+
+    # ---------- เปลี่ยนสถานะอาหาร ----------
+
+    async def set_kitchen_status(
+        self,
+        table: int,
+        item_id: int,
+        payload: KitchenStatusPayload,
+        admin_token: str | None = Cookie(None),
+    ):
+        if not self._is_admin(admin_token):
+            return self._json(
+                {"error": ADMIN_LOGIN_REQUIRED},
+                401,
+            )
+
+        try:
+            result = await self.stats_service.set_kitchen_status(
+                table,
+                item_id,
+                payload.status,
+                payload.expected_qty,
+                payload.opened_at,
+            )
+
+            return self._json(result)
+
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code == 404:
+                return self._json(
+                    {
+                        "error": (
+                            "ไม่พบออเดอร์นี้แล้ว "
+                            "กรุณาโหลดข้อมูลใหม่"
+                        )
+                    },
+                    404,
+                )
+
+            if exc.response.status_code == 409:
+                return self._json(
+                    {
+                        "error": (
+                            "บิลหรือจำนวนอาหารเปลี่ยนแล้ว "
+                            "กรุณาตรวจสอบใหม่"
+                        )
+                    },
+                    409,
+                )
+
+            return self._json(
+                {"error": "บันทึกสถานะอาหารไม่สำเร็จ"},
+                503,
+            )
+
+        except httpx.HTTPError:
+            return self._json(
+                {
+                    "error": (
+                        "ติดต่อ Backend ไม่ได้ "
+                        "กรุณาลองใหม่"
+                    )
+                },
+                503,
+            )
+
+    # ---------- เรียกชำระเงิน ----------
+
+    async def request_table_payment(
+        self,
+        table: int,
+        payload: TablePaymentPayload,
+        admin_token: str | None = Cookie(None),
+    ):
+        return await self._update_table_payment(
+            table,
+            payload,
+            admin_token,
+            "request-payment",
+        )
+
+    # ---------- ยืนยันรับเงิน ----------
+
+    async def confirm_table_payment(
+        self,
+        table: int,
+        payload: TablePaymentPayload,
+        admin_token: str | None = Cookie(None),
+    ):
+        return await self._update_table_payment(
+            table,
+            payload,
+            admin_token,
+            "confirm-payment",
+        )
+
+    async def _update_table_payment(
+        self,
+        table,
+        payload,
+        admin_token,
+        action,
+    ):
+        if not self._is_admin(admin_token):
+            return self._json(
+                {"error": ADMIN_LOGIN_REQUIRED},
+                401,
+            )
+
+        if (
+            action == "confirm-payment"
+            and payload.method is None
+        ):
+            return self._json(
+                {"error": "กรุณาเลือกวิธีรับเงิน"},
+                400,
+            )
+
+        try:
+            result = await self.stats_service.update_table_payment(
+                table,
+                payload.opened_at,
+                [
+                    item.model_dump()
+                    for item in payload.items
+                ],
+                action,
+                payload.method,
+                payload.expected_total,
+            )
+
+            return self._json(result)
+
+        except httpx.HTTPStatusError as exc:
+            code = exc.response.status_code
+
+            if code in (404, 409):
+                return self._json(
+                    {
+                        "error": (
+                            "บิลเปลี่ยนหรือโต๊ะถูกเคลียร์แล้ว "
+                            "กรุณาโหลดใหม่"
+                        )
+                    },
+                    code,
+                )
+
+            return self._json(
+                {
+                    "error": (
+                        "บันทึกการชำระไม่สำเร็จ "
+                        "กรุณาตรวจสอบก่อนยืนยันซ้ำ"
+                    )
+                },
+                503,
+            )
+
+        except httpx.HTTPError:
+            return self._json(
+                {
+                    "error": (
+                        "ยังตรวจสอบผลไม่ได้ "
+                        "กรุณาโหลดข้อมูลก่อนยืนยันซ้ำ"
+                    )
+                },
+                503,
+            )
+
+    # ---------- เคลียร์โต๊ะ ----------
+
+    async def reset_table(
+        self,
+        table: int,
+        payload: ResetTablePayload,
+        admin_token: str | None = Cookie(None),
+    ):
+        if not self._is_admin(admin_token):
+            return self._json(
+                {"error": ADMIN_LOGIN_REQUIRED},
+                401,
+            )
+
+        try:
+            result = await self.stats_service.reset_table(
+                table,
+                payload.opened_at,
+            )
+
+            return self._json(result)
+
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code == 409:
+                return self._json(
+                    {
+                        "error": (
+                            "โต๊ะยังจ่ายไม่ครบ หรือบิลเปลี่ยนแล้ว "
+                            "กรุณาโหลดข้อมูลใหม่"
+                        )
+                    },
+                    409,
+                )
+
+            if exc.response.status_code == 404:
+                return self._json(
+                    {
+                        "error": (
+                            "โต๊ะนี้ว่างแล้ว "
+                            "กรุณาโหลดข้อมูลใหม่"
+                        )
+                    },
+                    404,
+                )
+
+            return self._json(
+                {"error": "เคลียร์โต๊ะไม่สำเร็จ"},
+                503,
+            )
+
+        except httpx.HTTPError:
+            return self._json(
+                {
+                    "error": (
+                        "ติดต่อ Backend ไม่ได้ "
+                        "กรุณาลองใหม่"
+                    )
+                },
+                503,
+            )
+
+    # ---------- เตรียมข้อมูลแสดงผล ----------
+
+    def _build_view(
+        self,
+        data: dict | None,
+        menu: list,
+    ) -> dict:
+        now = datetime.now(TH_TZ)
+
+        today_label = (
+            f"{DAYS_TH[now.weekday()]} "
+            f"{now.day} "
+            f"{MONTHS_TH[now.month - 1]} "
+            f"{now.year + 543}"
+        )
+
+        menu_rows = [
+            {
+                "id": item.id,
+                "name": item.name,
+                "category": item.category,
+                "price": item.price,
+                "available": getattr(
+                    item,
+                    "available",
+                    True,
+                ),
+            }
+            for item in menu
+        ]
+
+        availability = {
+            item["id"]: item["available"]
+            for item in menu_rows
+        }
+
+        view = {
+            "today_label": today_label,
+            "updated_at": now.strftime("%H:%M:%S"),
+            "menu": menu_rows,
+            "has_data": data is not None,
+        }
+
+        if data is None:
+            data = {
+                "revenue": {
+                    "today": 0,
+                    "yesterday": 0,
+                    "change_pct": None,
+                },
+                "bills": {
+                    "today": 0,
+                    "yesterday": 0,
+                    "change_pct": None,
+                },
+                "tables": {
+                    "active": 0,
+                    "total": 0,
+                    "live": [],
+                },
+                "top_dish": None,
+                "top_dishes": [],
+                "recent_transactions": [],
+                "sales_trend": [],
+                "sales_by_hour": [],
+            }
+
+        view["revenue"] = {
+            **data["revenue"],
+            "trend": _trend(
+                data["revenue"]["change_pct"]
+            ),
+        }
+
+        view["bills"] = {
+            **data["bills"],
+            "trend": _trend(
+                data["bills"]["change_pct"]
+            ),
+        }
+
+        view["top_dish"] = data["top_dish"]
+
+        # โต๊ะทั้งหมด รวมโต๊ะที่มีบิลแต่เลขเกินจำนวนที่ตั้งไว้
+        live = {
+            table["table"]: table
+            for table in data["tables"]["live"]
+        }
+
+        total = data["tables"]["total"]
+        active = data["tables"]["active"]
+
+        numbers = sorted(
+            set(range(1, total + 1)) | set(live)
+        )
+
+        view["tables"] = {
+            "active": active,
+            "total": total,
+            "free": max(0, total - active),
+            "bar": (
+                min(100, round(active / total * 100))
+                if total
+                else 0
+            ),
+            "tiles": [
+                {
+                    "number": number,
+                    "live": live.get(number),
+                    "shown": (
+                        live[number]["items"][:4]
+                        if number in live
+                        else []
+                    ),
+                    "more": (
+                        max(
+                            0,
+                            len(live[number]["items"]) - 4,
+                        )
+                        if number in live
+                        else 0
+                    ),
+                }
+                for number in numbers
+            ],
+        }
+
+        # ประวัติการชำระล่าสุด
+        view["transactions"] = [
+            {
+                **transaction,
+                "time": (
+                    datetime.fromisoformat(
+                        transaction["created_at"]
+                    )
+                    .astimezone(TH_TZ)
+                    .strftime("%H:%M:%S")
+                ),
+                "method_name": METHODS_TH.get(
+                    transaction["method"],
+                    transaction["method"],
+                ),
+            }
+            for transaction in data["recent_transactions"]
+        ]
+
+        # กราฟยอดขายรายวัน
+        trend = data["sales_trend"]
+
+        peak = max(
+            (day["total"] for day in trend),
+            default=0,
+        )
+
+        view["trend_bars"] = []
+
+        for index, row in enumerate(trend):
+            day = datetime.strptime(
+                row["date"],
+                "%Y-%m-%d",
+            )
+
+            view["trend_bars"].append({
+                "label": (
+                    f"{DAYS_TH[day.weekday()]} "
+                    f"{day.day}"
+                ),
+                "total": row["total"],
+                "pct": _pct(row["total"], peak),
+                "is_today": index == len(trend) - 1,
+            })
+
+        # กราฟยอดขายรายชั่วโมง
+        hours = data["sales_by_hour"]
+
+        sold = [
+            row["hour"]
+            for row in hours
+            if row["total"] > 0
+        ]
+
+        start = min([8, *sold])
+        end = max([21, *sold])
+
+        hour_rows = [
+            row
+            for row in hours
+            if start <= row["hour"] <= end
+        ]
+
+        hour_peak = max(
+            (row["total"] for row in hour_rows),
+            default=0,
+        )
+
+        view["hour_bars"] = [
+            {
+                "label": f"{row['hour']:02d}",
+                "total": row["total"],
+                "pct": _pct(
+                    row["total"],
+                    hour_peak,
+                ),
+            }
+            for row in hour_rows
+        ]
+
+        # เมนูขายดีและสถานะเปิดขาย
+        top_max = max(
+            (
+                dish["qty"]
+                for dish in data["top_dishes"]
+            ),
+            default=0,
+        )
+
+        view["top_dishes"] = [
+            {
+                **dish,
+                "pct": _pct(
+                    dish["qty"],
+                    top_max,
+                ),
+                "known": dish["id"] in availability,
+                "available": availability.get(
+                    dish["id"],
+                    True,
+                ),
+            }
+            for dish in data["top_dishes"]
+        ]
+
+        return view
