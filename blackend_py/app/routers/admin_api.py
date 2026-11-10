@@ -31,8 +31,11 @@ def delete_item(item_id: int):
 class AvailabilitySchema(BaseModel):
     available: bool
 
-@router.patch("/availability/{item_id}")
-async def set_availability(item_id: int, payload: AvailabilitySchema):
+@router.patch(
+    "/availability/{item_id}",
+    responses={404: {"description": "Item not found"}},
+)
+def set_availability(item_id: int, payload: AvailabilitySchema):
     success = menu_service.set_availability(item_id, payload.available)
     if not success:
         raise HTTPException(status_code=404, detail="Item not found")

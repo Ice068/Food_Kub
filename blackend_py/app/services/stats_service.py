@@ -8,6 +8,7 @@ TH_TZ = timezone(timedelta(hours=7), name="ICT")
 VALID_KITCHEN_STATES = {"cooking", "ready", "served"}
 VALID_TABLE_STATES = {"dining", "waiting_payment"}
 VALID_PAYMENT_METHODS = {"cash", "promptpay_qr"}
+ERR_ITEM_NOT_FOUND = "ไม่พบรายการอาหาร"
 
 
 class StatsService:
@@ -88,7 +89,7 @@ class StatsService:
         ref = self.live_orders.document(str(table))
         snapshot = ref.get()
         if not snapshot.exists:
-            raise ValueError("ไม่พบรายการอาหาร")
+            raise ValueError(ERR_ITEM_NOT_FOUND)
         live = snapshot.to_dict() or {}
         found = False
         for item in live.get("items", []):
@@ -97,7 +98,7 @@ class StatsService:
                 found = True
                 break
         if not found:
-            raise ValueError("ไม่พบรายการอาหาร")
+            raise ValueError(ERR_ITEM_NOT_FOUND)
         live["updated_at"] = self._now().isoformat(timespec="seconds")
         ref.set(live)
         return {"status": "success"}
@@ -114,7 +115,7 @@ class StatsService:
             raise ValueError("โต๊ะนี้ยังไม่ได้เรียกเก็บเงิน")
         items = self._clean_items(live.get("items", []))
         if not items:
-            raise ValueError("ไม่พบรายการอาหาร")
+            raise ValueError(ERR_ITEM_NOT_FOUND)
         now = self._now()
         amount = round(sum(item["price"] * item["qty"] for item in items), 2)
         tx_ref = self.transactions.document()
@@ -136,11 +137,7 @@ class StatsService:
         ref.delete()
         return {"status": "success"}
 
-    def dashboard_data(self, total_tables: int = 10):
-        now = self._now()
-        today = now.date().isoformat()
-        yesterday = (now.date() - timedelta(days=1)).isoformat()
-        day_labels = [(now.date() - timedelta(days=offset)).isoformat() for offset in range(6, -1, -1)]
+    def _load_transactions(self):
         transactions = []
         for snap in self.transactions.stream():
             tx = snap.to_dict() or {}
@@ -153,7 +150,10 @@ class StatsService:
             except ValueError:
                 continue
             transactions.append(tx)
+        return transactions
 
+    @staticmethod
+    def _summarize_transactions(transactions, today: str):
         revenue_by_day = defaultdict(float)
         bills_by_day = defaultdict(int)
         category_totals = defaultdict(float)
@@ -164,23 +164,30 @@ class StatsService:
             if key == today:
                 for item in tx.get("items", []):
                     category_totals[item.get("category", "อื่นๆ")] += float(item.get("price", 0)) * int(item.get("qty", 0))
+        return revenue_by_day, bills_by_day, category_totals
 
-        order_events = []
-        for snap in self.orders.stream():
-            event = snap.to_dict() or {}
-            order_events.append(event)
+    def _summarize_popular_dishes(self, today: str):
         all_popular = defaultdict(int)
         daily_popular = defaultdict(int)
-        for event in order_events:
+        for snap in self.orders.stream():
+            event = snap.to_dict() or {}
             event_date = event.get("date")
             for item in event.get("items", []):
                 key = (int(item["id"]), str(item["name"]))
-                all_popular[key] += int(item.get("qty", 0))
+                qty = int(item.get("qty", 0))
+                all_popular[key] += qty
                 if event_date == today:
-                    daily_popular[key] += int(item.get("qty", 0))
-
-        popular = [{"id": key[0], "name": key[1], "qty": qty} for key, qty in sorted(all_popular.items(), key=lambda pair: (-pair[1], pair[0][1]))[:5]]
+                    daily_popular[key] += qty
+        popular = [
+            {"id": key[0], "name": key[1], "qty": qty}
+            for key, qty in sorted(all_popular.items(), key=lambda pair: (-pair[1], pair[0][1]))[:5]
+        ]
         daily_top = sorted(daily_popular.items(), key=lambda pair: (-pair[1], pair[0][1]))
+        today_top = daily_top[0] if daily_top else None
+        top_dish = {"id": today_top[0][0], "name": today_top[0][1], "qty": today_top[1]} if today_top else None
+        return popular, top_dish
+
+    def _load_live_tables(self):
         live_tables = []
         for snap in self.live_orders.stream():
             live = snap.to_dict() or {}
@@ -193,19 +200,34 @@ class StatsService:
                 "total": round(sum(float(item.get("price", 0)) * int(item.get("qty", 0)) for item in items), 2),
             })
         live_tables.sort(key=lambda item: item["table"])
+        return live_tables
+
+    def dashboard_data(self, total_tables: int = 10):
+        now = self._now()
+        today = now.date().isoformat()
+        yesterday = (now.date() - timedelta(days=1)).isoformat()
+        day_labels = [(now.date() - timedelta(days=offset)).isoformat() for offset in range(6, -1, -1)]
+
+        transactions = self._load_transactions()
+        revenue_by_day, bills_by_day, category_totals = self._summarize_transactions(transactions, today)
+        popular, top_dish = self._summarize_popular_dishes(today)
+        live_tables = self._load_live_tables()
 
         recent = sorted(transactions, key=lambda tx: tx["_datetime"], reverse=True)[:10]
         for tx in recent:
             tx["time"] = tx["_datetime"].strftime("%H:%M")
             tx.pop("_datetime", None)
+
         category_sum = sum(category_totals.values())
-        categories = [{"category": name, "total": total, "pct": round(total / category_sum * 100) if category_sum else 0} for name, total in sorted(category_totals.items())]
+        categories = [
+            {"category": name, "total": total, "pct": round(total / category_sum * 100) if category_sum else 0}
+            for name, total in sorted(category_totals.items())
+        ]
         trend = [{"date": label, "total": round(revenue_by_day[label], 2)} for label in day_labels]
         trend_max = max((day["total"] for day in trend), default=0)
         for day in trend:
             day["pct"] = round(day["total"] / trend_max * 100) if trend_max else 0
 
-        today_top = daily_top[0] if daily_top else None
         return {
             "today": today,
             "revenue": round(revenue_by_day[today], 2),
@@ -213,7 +235,7 @@ class StatsService:
             "revenue_yesterday": round(revenue_by_day[yesterday], 2),
             "bills_yesterday": bills_by_day[yesterday],
             "active_tables": len(live_tables), "total_tables": total_tables,
-            "top_dish": ({"id": today_top[0][0], "name": today_top[0][1], "qty": today_top[1]} if today_top else None),
+            "top_dish": top_dish,
             "popular": popular, "trend": trend, "trend_max": trend_max,
             "categories": categories, "live_tables": live_tables, "transactions": recent,
         }
