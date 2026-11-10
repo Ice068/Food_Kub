@@ -34,7 +34,7 @@ class LiveOrderUpdate:
     shared_paid: float
     expected_opened_at: str | None
     expected_updated_at: str | None
-    shared_item_ids: list[int] = ()
+    shared_item_ids: tuple[int, ...] | list[int] = ()
 
 
 @dataclass(frozen=True)
@@ -247,7 +247,7 @@ class StatsService:
         if (
             previous.get("status") == "waiting_payment"
             and status == "dining"
-            and not (float(previous.get("shared_paid", 0) or 0) > 0)
+            and float(previous.get("shared_paid", 0) or 0) <= 0
         ):
             raise ValueError("Table is waiting for payment")
 

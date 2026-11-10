@@ -13,10 +13,10 @@ from app.services.menu_service import MenuService
 
 router = APIRouter(prefix="/api/stats", tags=["Stats"])
 
-_admin_key = admin_api_key(create=True)
+_admin_key = admin_api_key()
 
 
-async def require_internal_admin(
+def require_internal_admin(
     x_food_kub_key: str = Header(""),
 ):
     if not secrets.compare_digest(x_food_kub_key, _admin_key):

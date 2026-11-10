@@ -8,11 +8,9 @@
             loading="lazy"
         >
         {% else %}
-        <div
-            class="food-placeholder"
-            role="img"
-            aria-label="ไม่มีรูปอาหาร"
-        >🍽️</div>
+        <div class="food-placeholder">
+            <span aria-hidden="true">🍽️</span>
+        </div>
         {% endif %}
     </div>
 

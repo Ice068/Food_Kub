@@ -3,7 +3,7 @@ import secrets
 from pathlib import Path
 
 
-def admin_api_key(create: bool = False) -> str:
+def admin_api_key(create: bool = True) -> str:
     configured = os.environ.get("FOOD_KUB_ADMIN_API_KEY")
     if configured:
         return configured

@@ -25,7 +25,12 @@ async def get_payment_methods():
     return payment_context.get_available_methods()
 
 
-@router.post("/process")
+@router.post(
+    "/process",
+    responses={
+        400: {"description": "Invalid payment request"},
+    },
+)
 async def process_payment(request: PaymentRequest):
     try:
         items = [item.model_dump() for item in request.items]

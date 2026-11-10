@@ -131,7 +131,7 @@ class PaymentRouter:
 
     # ---------- API ตรวจสถานะการชำระ ----------
 
-    async def payment_status(self, request: Request):
+    def payment_status(self, request: Request):
         table = getattr(request.state, "table_id", None)
 
         if table is None:
@@ -296,13 +296,13 @@ class PaymentRouter:
         if (
             table is not None
             and self.cart_service.get_cart(request)
+            and not await self._send_checkout_cart(request)
         ):
-            if not await self._send_checkout_cart(request):
-                return self._error(
-                    request,
-                    "ส่งรายการเข้าบิลไม่สำเร็จ กรุณาลองใหม่",
-                    503,
-                )
+            return self._error(
+                request,
+                "ส่งรายการเข้าบิลไม่สำเร็จ กรุณาลองใหม่",
+                503,
+            )
 
         _, scope = self._scope(request)
 

@@ -12,7 +12,7 @@ class MenuItem:
     def image_url(self) -> str:
         if not self.image:
             return "https://placehold.co/300x200?text=No+Image"
-        if self.image.startswith("http://") or self.image.startswith("https://"):
+        if self.image.startswith(("http://", "https://")):
             return self.image
         if self.image.startswith("/"):
             return self.image

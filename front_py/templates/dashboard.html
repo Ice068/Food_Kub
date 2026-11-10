@@ -9,7 +9,11 @@
     <link rel="stylesheet" href="/static/style.css">
     <link rel="stylesheet" href="/static/dashboard.css">
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script
+        src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"
+        integrity="sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4"
+        crossorigin="anonymous"
+    ></script>
 </head>
 <body>
 
@@ -826,6 +830,24 @@
 
     // ---------- เรียกชำระและยืนยันรับเงิน ----------
 
+    function confirmFullTablePayment(number, table, method) {
+        const methodLabel = method === "cash"
+            ? "เงินสด"
+            : "เงินเข้าบัญชี";
+
+        const isPartial = (table.paid_amount || 0) > 0 || (table.shared_paid || 0) > 0;
+        const paidText = (table.paid_amount || 0) > 0 ? table.paid_amount : table.shared_paid;
+        const msg = isPartial
+            ? `⚠️ ยืนยันปิดบิลโต๊ะ ${number} ทั้งหมด?\n\n` +
+              `• โต๊ะนี้มีรายการแยกจ่ายไปแล้ว: ${money(paidText)}\n` +
+              `• ยอดคงเหลือที่ต้องชำระ: ${money(table.total)}\n\n` +
+              `กดตกลงเพื่อรับ${methodLabel} และ "ปิดบิลโต๊ะส่วนที่เหลือทั้งหมด"\n` +
+              `(หมายเหตุ: หากลูกค้าท่านอื่นในโต๊ะยังแยกจ่ายไม่ครบ อย่าเพิ่งกดยืนยันปุ่มนี้)`
+            : `ตรวจสอบว่าได้รับ${methodLabel}ครบ ${money(table.total)} สำหรับโต๊ะ ${number} แล้วใช่ไหม? ยืนยันแล้วจะบันทึกยอดขายและปิดบิล`;
+
+        return confirm(msg);
+    }
+
     $("table-grid").addEventListener(
         "click",
         async (event) => {
@@ -860,24 +882,11 @@
                 return;
             }
 
-            if (action === "confirm-payment") {
-                const methodLabel = method === "cash"
-                    ? "เงินสด"
-                    : "เงินเข้าบัญชี";
-
-                const isPartial = (table.paid_amount || 0) > 0 || (table.shared_paid || 0) > 0;
-                const paidText = (table.paid_amount || 0) > 0 ? table.paid_amount : table.shared_paid;
-                const msg = isPartial
-                    ? `⚠️ ยืนยันปิดบิลโต๊ะ ${number} ทั้งหมด?\n\n` +
-                      `• โต๊ะนี้มีรายการแยกจ่ายไปแล้ว: ${money(paidText)}\n` +
-                      `• ยอดคงเหลือที่ต้องชำระ: ${money(table.total)}\n\n` +
-                      `กดตกลงเพื่อรับ${methodLabel} และ "ปิดบิลโต๊ะส่วนที่เหลือทั้งหมด"\n` +
-                      `(หมายเหตุ: หากลูกค้าท่านอื่นในโต๊ะยังแยกจ่ายไม่ครบ อย่าเพิ่งกดยืนยันปุ่มนี้)`
-                    : `ตรวจสอบว่าได้รับ${methodLabel}ครบ ${money(table.total)} สำหรับโต๊ะ ${number} แล้วใช่ไหม? ยืนยันแล้วจะบันทึกยอดขายและปิดบิล`;
-
-                const confirmed = confirm(msg);
-
-                if (!confirmed) return;
+            if (
+                action === "confirm-payment" &&
+                !confirmFullTablePayment(number, table, method)
+            ) {
+                return;
             }
 
             paymentActions.add(number);

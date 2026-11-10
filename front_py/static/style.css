@@ -5,6 +5,7 @@
 }
 
 .table-banner {
+    display: block;
     margin-bottom: 20px;
     padding: 14px 18px;
     background: #fff3e8;
@@ -19,9 +20,9 @@
     justify-content: center;
     gap: 12px;
     padding: 12px 20px;
-    border: 1px solid #d9480f;
+    border: 1px solid #b8380a;
     border-radius: 10px;
-    background: #d9480f;
+    background: #b8380a;
     color: #fff;
     text-decoration: none;
     font: inherit;
@@ -30,7 +31,7 @@
     text-align: center;
 }
 
-.action-button:hover { background: #b8380a; border-color: #b8380a; }
+.action-button:hover { background: #9c2f08; border-color: #9c2f08; }
 .action-button:focus-visible { outline: 3px solid #212529; outline-offset: 3px; }
 .action-button.secondary { background: #fff; color: #b8380a; }
 .action-button.secondary:hover { background: #fff3e8; }
@@ -51,7 +52,7 @@
 .admin-qr-info { display: flex; align-items: center; gap: 16px; }
 .admin-qr-info h2 { font-size: 1.15rem; margin-bottom: 6px; }
 .admin-qr-info p { color: #79513d; line-height: 1.6; }
-.qr-icon { display: flex; padding: 12px; background: white; color: #d9480f; border-radius: 12px; }
+.qr-icon { display: flex; padding: 12px; background: white; color: #b8380a; border-radius: 12px; }
 .qr-icon svg { width: 36px; height: 36px; }
 
 body {
@@ -435,4 +436,16 @@ h1 {
     font-size: 0.85rem;
     color: #888;
     margin-bottom: 16px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .menu-card,
+    .navbar nav a {
+        transition: none;
+    }
+
+    .menu-card:hover,
+    .navbar nav a:hover {
+        transform: none;
+    }
 }

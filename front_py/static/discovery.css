@@ -36,7 +36,7 @@
 
 .discovery-link {
     padding: 13px 18px;
-    background: #d9480f;
+    background: #b8380a;
     color: white;
     border-radius: 12px;
 }
@@ -72,9 +72,9 @@
 }
 
 .category-chip.is-active {
-    background: #d9480f;
+    background: #b8380a;
     color: white;
-    border-color: #d9480f;
+    border-color: #b8380a;
 }
 
 .food-category {
@@ -239,7 +239,7 @@
     padding: 14px;
     border: 0;
     border-radius: 12px;
-    background: #d9480f;
+    background: #b8380a;
     color: white;
     font: inherit;
     font-size: 1.12rem;
@@ -249,7 +249,7 @@
 
 .spin-button:hover,
 .discovery-link:hover {
-    background: #b8380a;
+    background: #9c2f08;
 }
 
 .wheel-help {

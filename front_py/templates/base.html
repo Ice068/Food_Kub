@@ -51,13 +51,13 @@
     </header>
 
     <main class="container">
-        <div class="table-banner" role="status">
+        <output class="table-banner">
             {% if table_id is not none %}
             กำลังสั่งอาหาร: <strong>โต๊ะ {{ table_id }}</strong>
             {% else %}
             ยังไม่ได้ระบุโต๊ะ กรุณาสแกน QR Code ที่โต๊ะของคุณ
             {% endif %}
-        </div>
+        </output>
 
         {% block content %}{% endblock %}
     </main>
