@@ -1,6 +1,19 @@
 # หัวข้อ : ระบบสั่งอาหาร (Food_Kub)
 
-## ระบบสั่งอาหาร / ดูเมนูอาหาร
+## ระบบสั่งอาหาร / ดูเมนูอาหาร / จัดการบิลและแยกจ่ายตามโต๊ะ
+
+---
+
+## 🌐 ลิงก์ระบบที่ติดตั้งจริงและ CI/CD (Live Deployment & Links)
+
+- **เว็บไซต์จริงบน Render (Live Web App):** [https://food-kub.onrender.com](https://food-kub.onrender.com)
+  - หน้าเมนูสั่งอาหาร (ตัวอย่างโต๊ะที่ 1): [https://food-kub.onrender.com/?table=1](https://food-kub.onrender.com/?table=1)
+  - หน้าวงล้อสุ่มอาหาร: [https://food-kub.onrender.com/random?table=1](https://food-kub.onrender.com/random?table=1)
+  - หน้าตะกร้าและชำระเงิน/แยกบิล: [https://food-kub.onrender.com/cart?table=1](https://food-kub.onrender.com/cart?table=1)
+  - หน้าจัดการร้านและ Dashboard (Admin): [https://food-kub.onrender.com/admin/login](https://food-kub.onrender.com/admin/login)
+- **GitHub Actions (Automated CI/CD Pipeline):** [https://github.com/Ice068/Food_Kub/actions](https://github.com/Ice068/Food_Kub/actions)
+- **SonarQube Cloud (Code Quality & Security Scan):** [https://sonarcloud.io/project/overview?id=Ice068_Food_Kub](https://sonarcloud.io/project/overview?id=Ice068_Food_Kub)
+- **GitHub Repository:** [https://github.com/Ice068/Food_Kub](https://github.com/Ice068/Food_Kub)
 
 ---
 
@@ -135,3 +148,10 @@ cd front_py
 python -m uvicorn main:app --reload --port 8001
 ```
 *เซิร์ฟเวอร์หน้าบ้านจะเปิดใช้งานที่ http://localhost:8001*
+
+---
+
+## 🚀 ระบบติดตั้งอัตโนมัติ (CI/CD & Cloud Deployment)
+
+- **Continuous Integration (CI):** ไฟล์ `.github/workflows/ci.yml` บน GitHub Actions จะทำงานอัตโนมัติเมื่อมีการ Push หรือเปิด Pull Request โดยตรวจสอบไวยากรณ์ (`python -m compileall .`), รันชุดทดสอบอัตโนมัติ (`pytest test_api.py` ครบ 25 ข้อ), และสแกนคุณภาพโค้ดผ่าน **SonarQube Cloud**
+- **Continuous Deployment (CD):** เมื่อโค้ดบนกิ่ง `main` ผ่านขั้นตอน CI (`needs: ci`) ระบบจะยิง Webhook (`RENDER_DEPLOY_HOOK_URL`) ไปสั่งให้ **Render Cloud** ดึงโค้ดล่าสุดและรันสคริปต์ `start_render.sh` เพื่อสตาร์ททั้ง Backend API (`127.0.0.1:8000`) และ Frontend Web (`0.0.0.0:$PORT`) อัตโนมัติที่ [https://food-kub.onrender.com](https://food-kub.onrender.com)
