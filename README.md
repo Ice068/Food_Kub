@@ -157,6 +157,6 @@ python -m uvicorn main:app --reload --port 8001
 - **Continuous Integration (CI):** ไฟล์ `.github/workflows/ci.yml` บน GitHub Actions จะทำงานอัตโนมัติเมื่อมีการ Push หรือเปิด Pull Request โดยตรวจสอบไวยากรณ์ (`python -m compileall .`), รันชุดทดสอบอัตโนมัติ (`pytest test_api.py` ครบ 25 ข้อ), และสแกนคุณภาพโค้ดผ่าน **SonarQube Cloud**
 - **Continuous Deployment (CD):** เมื่อโค้ดบนกิ่ง `main` ผ่านขั้นตอน CI (`needs: ci`) ระบบจะยิง Webhook (`RENDER_DEPLOY_HOOK_URL`) ไปสั่งให้ **Render Cloud** ดึงโค้ดล่าสุดและรันสคริปต์ `start_render.sh` เพื่อสตาร์ททั้ง Backend API (`127.0.0.1:8000`) และ Frontend Web (`0.0.0.0:$PORT`) อัตโนมัติที่ [https://food-kub.onrender.com](https://food-kub.onrender.com)
 
-##Id test
+## Id test
 :Admin 
 :123456
