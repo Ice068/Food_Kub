@@ -1,4 +1,5 @@
 import httpx
+from app.core.backend import backend_client
 
 from app.core.config import settings
 
@@ -15,7 +16,7 @@ class PaymentService:
 
     async def get_methods(self) -> list[dict]:
         """ดึงรายชื่อวิธีจ่ายเงินที่เปิดใช้งาน"""
-        async with httpx.AsyncClient() as client:
+        async with backend_client() as client:
             resp = await client.get(f"{self.backend_url}/api/payment/methods")
             resp.raise_for_status()
             return resp.json()
@@ -23,7 +24,7 @@ class PaymentService:
     async def process(self, method: str, amount: float, items: list[dict]) -> dict:
         """ส่งคำสั่งจ่ายเงินไปให้หลังบ้านทำรายการ"""
         payload = {"method": method, "amount": amount, "items": items}
-        async with httpx.AsyncClient() as client:
+        async with backend_client() as client:
             resp = await client.post(
                 f"{self.backend_url}/api/payment/process", json=payload
             )

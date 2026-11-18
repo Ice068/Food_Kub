@@ -2,6 +2,7 @@ import os
 from urllib.parse import urlencode, urlsplit
 
 import httpx
+from app.core.admin_auth import valid_admin_token
 import qrcode
 from fastapi import APIRouter, Cookie, Form, Request
 from fastapi.responses import RedirectResponse
@@ -128,7 +129,7 @@ class TableRouter:
         saved: bool = False,
         admin_token: str | None = Cookie(None),
     ):
-        if admin_token != "logged_in":
+        if not valid_admin_token(admin_token):
             return RedirectResponse(
                 "/admin/login",
                 status_code=303,
@@ -177,7 +178,7 @@ class TableRouter:
         ),
         admin_token: str | None = Cookie(None),
     ):
-        if admin_token != "logged_in":
+        if not valid_admin_token(admin_token):
             return RedirectResponse(
                 "/admin/login",
                 status_code=303,

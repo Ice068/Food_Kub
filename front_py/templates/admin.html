@@ -1,112 +1,76 @@
-<!DOCTYPE html>
-<html lang="th">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ title }}</title>
-    <link rel="stylesheet" href="/static/style.css">
-</head>
-<body>
-<div class="container">
-    <!-- Header: ซ้าย = โลโก้ / ขวา = ปุ่มแดชบอร์ด + ออกจากระบบ -->
-    <header class="navbar" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 20px;">
-        <a href="/admin/" class="logo">🛠️ Admin - จัดการเมนู</a>
-        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-            <a href="/admin/dashboard" style="color: white; background-color: #333; padding: 8px 15px; text-decoration: none; border-radius: 5px; font-size: 14px;">📊 แดชบอร์ด</a>
-            <a href="/admin/logout" style="color: white; background-color: #333; padding: 8px 15px; text-decoration: none; border-radius: 5px; font-size: 14px;">ออกจากระบบ 🚪</a>
-        </div>
-    </header>
-
-    <main class="container">
-        <h1>{{ title }}</h1>
-        <section class="admin-qr-panel" aria-label="จัดการ QR Code ประจำโต๊ะ">
-            <div class="admin-qr-info">
-                <span class="qr-icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M3 3h6v6H3zM15 3h6v6h-6zM3 15h6v6H3zM15 15h2v2h-2zM21 13v4M13 21h4M21 21h-2M3 12h2M12 3v2M12 9v4h5"/>
-                    </svg>
-                </span>
-                <div>
-                    <h2>QR Code ประจำโต๊ะ</h2>
-                    <p>กำหนดจำนวนโต๊ะ แล้วสร้างและพิมพ์ QR ให้ลูกค้าสแกนเลือกอาหาร</p>
-                </div>
-            </div>
-            <a class="action-button" href="/admin/tables">จัดการ QR Code ประจำโต๊ะ <span aria-hidden="true">→</span></a>
-        </section>
-
-        <div class="admin-form">
-            <h2>เพิ่มเมนูใหม่</h2>
-            <!-- แก้ action ให้มี /admin นำหน้าเพื่อให้ตรงกับ Router -->
-            <form action="/admin/add" method="post" enctype="multipart/form-data">
-                <div class="form-group">
-                    <label>ชื่อเมนู</label>
-                    <input type="text" name="name" required>
-                </div>
-                
-                <div class="form-group">
-                    <label>ราคา (บาท)</label>
-                    <input type="number" name="price" step="0.01" required>
-                </div>
-                
-                <div class="form-group">
-                    <label>หมวดหมู่</label>
-                    <select name="category" required>
-                        <option value="" disabled selected>-- กรุณาเลือกหมวดหมู่ --</option>
-                        <option value="จานเดียว">จานเดียว</option>
-                        <option value="ต้มแกง">ต้มแกง</option>
-                        <option value="ทอด/ผัด">ทอด/ผัด</option>
-                        <option value="ยำ/ตำ">ยำ/ตำ</option>
-                        <option value="ทานเล่น">ทานเล่น</option>
-                        <option value="เครื่องดื่ม">เครื่องดื่ม</option>
-                        <option value="ของหวาน">ของหวาน</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label>รูปภาพ</label>
-                    <input type="file" name="image" accept="image/*">
-                </div>
-                
-                <button type="submit" class="btn-add">เพิ่มเมนู</button>
-            </form>
-        </div>
-
-        <h2>รายการเมนูทั้งหมด</h2>
-        <table class="admin-table">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>รูป</th>
-                    <th>ชื่อ</th>
-                    <th>ราคา</th>
-                    <th>หมวดหมู่</th>
-                    <th>จัดการ</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in items %}
-                <tr>
-                    <td>{{ item.id }}</td>
-                    <td><img src="{{ item.image | menu_image_url }}" alt="{{ item.name }}" width="60" height="60"
-                             style="object-fit:cover;border-radius:6px;"></td>
-                    <td>{{ item.name }}</td>
-                    <td>{{ item.price }} บาท</td>
-                    <td>{{ item.category }}</td>
-                    <td>
-                        <span style="color: gray">แก้ไข (เร็วๆ นี้)</span>
-                        <!-- แก้ action ให้มี /admin นำหน้าเพื่อให้ตรงกับ Router -->
-                        <form action="/admin/delete/{{ item.id }}" method="post" style="display:inline"
-                              onsubmit="return confirm('ยืนยันลบเมนูนี้?');">
-                            <button type="submit" class="btn-remove">ลบ</button>
-                        </form>
-                    </td>
-                </tr>
-                {% else %}
-                <tr><td colspan="6">ยังไม่มีเมนู</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </main>
-</div>
-</body>
-</html>
+{% extends "base.html" %}
+{% block extra_head %}<link rel="stylesheet" href="/static/operations.css">{% endblock %}
+{% block content %}
+<nav class="ops-nav" aria-label="จัดการร้าน"><a href="/admin/dashboard">ภาพรวมร้าน</a><a href="/admin/" aria-current="page">จัดการเมนู</a><a href="/admin/tables">QR ประจำโต๊ะ</a><a class="ops-signout" href="/admin/logout">ออกจากระบบ ↗</a></nav>
+<header class="page-heading ops-heading"><div><p class="eyebrow">THE RESTAURANT / MENU STUDIO</p><h1>ทุกจาน เริ่มต้นที่นี่</h1><p class="muted">จัดการเมนู ราคา และภาพอาหารของร้านในที่เดียว</p></div><button class="button button-primary" type="button" data-open-dialog="menu-create">เพิ่มเมนูใหม่ <span aria-hidden="true">＋</span></button></header>
+{% if request.query_params.get("saved") %}<p class="status-banner ops-success" role="status">บันทึกเมนูเรียบร้อยแล้ว · หน้าร้านอัปเดตพร้อมรับออเดอร์</p>{% elif request.query_params.get("deleted") %}<p class="status-banner ops-success" role="status">นำเมนูออกจากร้านเรียบร้อยแล้ว</p>{% endif %}
+{% if error %}<div class="status-banner ops-error" role="alert">{{ error }}</div>{% endif %}
+<section class="glass-panel ops-catalog" aria-labelledby="catalog-title">
+<div class="ops-catalog-head"><div><p class="eyebrow">YOUR COLLECTION</p><h2 id="catalog-title">รายการเมนู <span class="ops-count">{{ items | length }}</span></h2></div><a class="button button-secondary" href="/admin/dashboard#all-menu">จัดการสถานะเปิดขาย ↗</a></div>
+<div class="ops-toolbar"><label class="ops-search"><span class="sr-only">ค้นหาเมนู</span><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg><input id="admin-search" type="search" placeholder="ค้นหาชื่อเมนู..." autocomplete="off"></label><label class="ops-category"><span class="sr-only">กรองตามหมวดหมู่</span><select id="admin-category"><option value="">ทุกหมวดหมู่</option>{% for category in items | map(attribute='category') | unique | sort %}<option value="{{ category }}">{{ category }}</option>{% endfor %}</select></label><output id="admin-count" class="muted" aria-live="polite">{{ items | length }} รายการ</output></div>
+<div class="ops-table-wrap"><table class="ops-table"><thead><tr><th scope="col">เมนูอาหาร</th><th scope="col">หมวดหมู่</th><th scope="col">ราคา / จาน</th><th scope="col"><span class="sr-only">จัดการเมนู</span></th></tr></thead><tbody>
+{% for item in items %}<tr data-menu-row data-name="{{ item.name }}" data-category="{{ item.category }}"><th scope="row"><div class="ops-menu-name"><img src="{{ item.image | menu_image_url }}" alt="" width="58" height="58" loading="lazy"><div>{{ item.name }}<small>MENU {{ '%03d' | format(item.id) }}</small></div></div></th><td><span class="ops-category-tag">{{ item.category }}</span></td><td class="price">฿{{ '%.2f' | format(item.price) }}</td><td><div class="ops-row-actions"><button type="button" class="button button-ghost" data-edit-menu="{{ item.id }}" data-name="{{ item.name }}" data-price="{{ item.price }}" data-category="{{ item.category }}" aria-label="แก้ไข {{ item.name }}">แก้ไข</button><button type="button" class="icon-button ops-delete" data-delete-menu="{{ item.id }}" data-name="{{ item.name }}" aria-label="ลบ {{ item.name }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7"/></svg></button></div></td></tr>{% endfor %}
+</tbody></table></div><div id="admin-empty" class="empty-state" {% if items %}hidden{% endif %}><span class="ops-empty-mark" aria-hidden="true">⌕</span><h3>ยังไม่มีเมนูที่ตรงกัน</h3><p class="muted">ลองเปลี่ยนคำค้นหรือหมวดหมู่ หรือเพิ่มเมนูใหม่ให้ร้าน</p><button id="admin-clear" type="button" class="button button-secondary">แสดงเมนูทั้งหมด</button></div></section>
+<aside class="glass-panel ops-tip"><span class="ops-tip-symbol" aria-hidden="true">↗</span><div><h3>พร้อมรับออเดอร์จากทุกโต๊ะ</h3><p class="muted">สร้าง QR ประจำโต๊ะให้ลูกค้าสแกนแล้วเลือกเมนูได้ทันที</p></div><a class="button button-secondary" href="/admin/tables">จัดการ QR ประจำโต๊ะ</a></aside>
+{% macro menu_fields(prefix, editing=false) %}
+<div class="field"><label for="{{ prefix }}-name">ชื่อเมนู</label><input id="{{ prefix }}-name" name="name" required maxlength="120" autocomplete="off" placeholder="เช่น ข้าวกะเพราหมูสับ"></div>
+<div class="form-grid"><div class="field"><label for="{{ prefix }}-price">ราคา (บาท)</label><input id="{{ prefix }}-price" name="price" type="number" min="0.01" max="100000" step="0.01" inputmode="decimal" required placeholder="65.00"></div><div class="field"><label for="{{ prefix }}-category">หมวดหมู่</label><select id="{{ prefix }}-category" name="category" required><option value="" disabled selected>เลือกหมวดหมู่</option>{% for category in ['จานเดียว','ต้มแกง','ทอด/ผัด','ยำ/ตำ','ทานเล่น','เครื่องดื่ม','ของหวาน'] %}<option value="{{ category }}">{{ category }}</option>{% endfor %}</select></div></div>
+<div class="field"><label for="{{ prefix }}-image">รูปภาพอาหาร{% if editing %}ใหม่{% endif %}</label><input id="{{ prefix }}-image" name="image" type="file" accept="image/jpeg,image/png,image/webp,image/gif" aria-describedby="{{ prefix }}-image-help"><small id="{{ prefix }}-image-help" class="muted">JPG, PNG, WebP หรือ GIF สูงสุด 5 MB{% if editing %} · ไม่เลือกเพื่อใช้รูปเดิม{% endif %}</small><img class="ops-upload-preview" id="{{ prefix }}-preview" alt="ตัวอย่างรูปภาพที่เลือก" width="420" height="220" hidden></div>
+{% endmacro %}
+<dialog class="ops-dialog glass-panel" id="menu-create" data-dialog aria-labelledby="create-title"><div class="ops-dialog-head"><div><p class="eyebrow">A NEW FAVORITE</p><h2 id="create-title">เพิ่มเมนูใหม่</h2></div><button class="icon-button" type="button" data-close-dialog aria-label="ปิด">×</button></div><form action="/admin/add" method="post" enctype="multipart/form-data" class="stack">{{ menu_fields('create') }}<button class="button button-primary" type="submit">เพิ่มเมนูเข้าร้าน ＋</button></form></dialog>
+<dialog class="ops-dialog glass-panel" id="menu-edit" data-dialog aria-labelledby="edit-title"><div class="ops-dialog-head"><div><p class="eyebrow">THE LITTLE DETAILS</p><h2 id="edit-title">แก้ไขเมนู</h2></div><button class="icon-button" type="button" data-close-dialog aria-label="ปิด">×</button></div><form id="edit-menu-form" method="post" enctype="multipart/form-data" class="stack">{{ menu_fields('edit', true) }}<button class="button button-primary" type="submit">บันทึกการเปลี่ยนแปลง</button></form></dialog>
+<dialog class="ops-dialog ops-dialog-small glass-panel" id="menu-delete" data-dialog aria-labelledby="delete-title"><p class="eyebrow">REMOVE FROM MENU</p><h2 id="delete-title">ลบเมนูนี้ออกจากร้าน?</h2><p class="muted" id="delete-menu-name"></p><p class="muted">รายการนี้จะไม่แสดงในหน้าเมนูของลูกค้าอีก</p><form id="delete-menu-form" method="post" class="ops-dialog-actions"><button type="button" class="button button-secondary" data-close-dialog>เก็บเมนูไว้</button><button type="submit" class="button button-danger">ยืนยันลบเมนู</button></form></dialog>
+<script>
+(() => {
+    const search = document.getElementById('admin-search');
+    const category = document.getElementById('admin-category');
+    const rows = [...document.querySelectorAll('[data-menu-row]')];
+    const filter = () => {
+        const query = search.value.trim().toLocaleLowerCase('th');
+        let visible = 0;
+        rows.forEach(row => {
+            row.hidden = !(row.dataset.name.toLocaleLowerCase('th').includes(query) && (!category.value || row.dataset.category === category.value));
+            if (!row.hidden) visible += 1;
+        });
+        document.getElementById('admin-count').textContent = `${visible} รายการ`;
+        document.getElementById('admin-empty').hidden = visible > 0;
+    };
+    search.addEventListener('input', filter);
+    category.addEventListener('change', filter);
+    document.getElementById('admin-clear').addEventListener('click', () => { search.value = ''; category.value = ''; filter(); search.focus(); });
+    document.addEventListener('click', event => {
+        const edit = event.target.closest('[data-edit-menu]');
+        if (edit) {
+            document.getElementById('edit-menu-form').action = `/admin/edit/${edit.dataset.editMenu}`;
+            document.getElementById('edit-name').value = edit.dataset.name;
+            document.getElementById('edit-price').value = edit.dataset.price;
+            const select = document.getElementById('edit-category');
+            if (![...select.options].some(option => option.value === edit.dataset.category)) select.add(new Option(edit.dataset.category, edit.dataset.category));
+            select.value = edit.dataset.category;
+            document.getElementById('edit-image').value = '';
+            document.getElementById('edit-preview').hidden = true;
+            document.getElementById('menu-edit').showModal();
+        }
+        const remove = event.target.closest('[data-delete-menu]');
+        if (remove) {
+            document.getElementById('delete-menu-form').action = `/admin/delete/${remove.dataset.deleteMenu}`;
+            document.getElementById('delete-menu-name').textContent = remove.dataset.name;
+            document.getElementById('menu-delete').showModal();
+        }
+    });
+    ['create', 'edit'].forEach(prefix => {
+        const input = document.getElementById(`${prefix}-image`);
+        let previewUrl;
+        input.addEventListener('change', () => {
+            const file = input.files[0];
+            input.setCustomValidity(file && file.size > 5 * 1024 * 1024 ? 'กรุณาเลือกรูปภาพขนาดไม่เกิน 5 MB' : '');
+            const preview = document.getElementById(`${prefix}-preview`);
+            if (previewUrl) URL.revokeObjectURL(previewUrl);
+            preview.hidden = !file || !input.validity.valid;
+            if (!preview.hidden) { previewUrl = URL.createObjectURL(file); preview.src = previewUrl; }
+            input.reportValidity();
+        });
+    });
+})();
+</script>
+{% endblock %}

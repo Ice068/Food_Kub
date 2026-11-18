@@ -2,6 +2,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Literal
 
 import httpx
+from app.core.admin_auth import valid_admin_token
 from fastapi import APIRouter, Cookie, Query, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel, Field, StrictBool
@@ -164,7 +165,7 @@ class DashboardRouter:
 
     @staticmethod
     def _is_admin(admin_token: str | None) -> bool:
-        return admin_token == "logged_in"
+        return valid_admin_token(admin_token)
 
     @staticmethod
     def _json(content: dict, status_code: int = 200):

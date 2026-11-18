@@ -1,202 +1,55 @@
 {% extends "base.html" %}
-
-{% block extra_head %}
-<style>
-    .kitchen-box {
-        background: #fff;
-        border: 2px solid #b2f2bb;
-        border-radius: 12px;
-        padding: 20px;
-        margin-top: 28px;
-        box-shadow: 0 4px 12px rgba(43, 138, 62, 0.08);
-    }
-    .kitchen-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 14px;
-        flex-wrap: wrap;
-        gap: 8px;
-    }
-    .kitchen-title {
-        font-size: 1.15rem;
-        font-weight: bold;
-        color: #2b8a3e;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-    .kitchen-badge {
-        background: #e6fcf5;
-        color: #087f5b;
-        padding: 4px 10px;
-        border-radius: 20px;
-        font-size: 0.85rem;
-        font-weight: 600;
-    }
-    .kitchen-list {
-        width: 100%;
-        border-collapse: collapse;
-        margin-bottom: 14px;
-    }
-    .kitchen-list th, .kitchen-list td {
-        padding: 8px 12px;
-        text-align: left;
-        border-bottom: 1px solid #f1f3f5;
-        font-size: 0.95rem;
-    }
-    .kitchen-list th {
-        background: #f8f9fa;
-        color: #495057;
-    }
-    .kitchen-footer {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 12px;
-        padding-top: 10px;
-        border-top: 2px dashed #b2f2bb;
-    }
-    .kitchen-total {
-        font-size: 1.15rem;
-        font-weight: bold;
-        color: #212529;
-    }
-    .ordered-alert {
-        background: #ebfbee;
-        border: 1px solid #8ce99a;
-        color: #1e6b2e;
-        border-radius: 10px;
-        padding: 14px 18px;
-        margin-bottom: 20px;
-        font-size: 1rem;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-    .cart-actions-row {
-        display: flex;
-        gap: 10px;
-        flex-wrap: wrap;
-        align-items: center;
-        margin-top: 10px;
-    }
-</style>
-{% endblock %}
-
+{% block extra_head %}<link rel="stylesheet" href="/static/commerce.css">{% endblock %}
 {% block content %}
-<div class="cart-container">
-    {% if ordered %}
-    <div class="ordered-alert" role="alert">
-        <span>👨‍🍳</span>
-        <div>
-            <strong>ส่งออเดอร์เข้าครัวเรียบร้อยแล้ว!</strong>
-            <br><small>พ่อครัวกำลังจัดเตรียมอาหารให้โต๊ะของคุณ คุณสามารถเลือกสั่งอาหารเพิ่มได้ หรือกด "เรียกเช็คบิล" เมื่อทานเสร็จแล้ว</small>
+<header class="page-heading commerce-heading">
+  <div><p class="eyebrow">YOUR TABLE, YOUR TASTE</p><h1>มื้อที่คุณเลือก</h1><p class="muted">จานโปรดพร้อมแล้ว ส่งเข้าครัวเมื่อคุณพร้อม</p></div>
+  <a href="/{{ table_query }}" class="button button-secondary">← เลือกอาหารเพิ่ม</a>
+</header>
+{% if ordered %}
+<div class="status-banner commerce-success" role="status"><span class="status-dot" aria-hidden="true"></span><div><strong>ส่งออเดอร์เข้าครัวเรียบร้อยแล้ว!</strong><p>ครัวรับรายการแล้ว คุณสามารถสั่งเพิ่มหรือเช็คบิลได้ตลอด</p></div></div>
+{% endif %}
+<div class="commerce-layout">
+  <div class="stack">
+    <section class="glass-panel commerce-panel" aria-labelledby="cart-title">
+      <div class="section-heading"><h2 id="cart-title">รายการที่กำลังเลือกสั่ง</h2><span class="badge">{{ cart_count|default(0) }} รายการ</span></div>
+      {% for item in cart_items %}
+      <article class="cart-line">
+        {% if item.image_url|default('') %}<img class="cart-line-image" src="{{ item.image_url }}" alt="" width="72" height="72" loading="lazy">{% else %}<div class="cart-line-symbol" aria-hidden="true">{{ '%02d'|format(loop.index) }}</div>{% endif %}
+        <div class="cart-line-info"><h3>{{ item.name }}</h3><p class="muted">{{ '%.2f'|format(item.price) }} บาท / จาน</p><strong class="price">฿{{ '%.2f'|format(item.price * item.qty) }}</strong></div>
+        <div class="cart-line-controls">
+          <div class="quantity-control" aria-label="จำนวน {{ item.name }}">
+            <form action="/cart/update/{{ item.id }}{{ table_query }}" method="post"><input type="hidden" name="quantity" value="{{ item.qty - 1 }}"><button class="icon-button" aria-label="ลดจำนวน {{ item.name }}" type="submit">−</button></form>
+            <span class="price">{{ item.qty }}</span>
+            <form action="/cart/update/{{ item.id }}{{ table_query }}" method="post"><input type="hidden" name="quantity" value="{{ item.qty + 1 }}"><button class="icon-button" aria-label="เพิ่มจำนวน {{ item.name }}" type="submit" {% if item.qty >= 99 %}disabled{% endif %}>+</button></form>
+          </div>
+          <form action="/cart/remove/{{ item.id }}{{ table_query }}" method="post"><button type="submit" class="button button-ghost remove-line" aria-label="นำ {{ item.name }} ออกจากตะกร้า">นำออก</button></form>
         </div>
-    </div>
-    {% endif %}
-
-    <h2>🛒 รายการที่กำลังเลือกสั่ง</h2>
-
-    {% for item in cart_items %}
-    <div class="cart-item">
-        <div class="cart-item-info">
-            <strong>{{ item.name }}</strong>
-            <span>{{ item.price }} บาท / ชิ้น</span>
-        </div>
-        <div class="cart-item-controls">
-            <form action="/cart/update/{{ item.id }}{{ table_query }}" method="post">
-                <input type="hidden" name="quantity" value="{{ item.qty - 1 }}">
-                <button type="submit">-</button>
-            </form>
-
-            <span>{{ item.qty }}</span>
-
-            <form action="/cart/update/{{ item.id }}{{ table_query }}" method="post">
-                <input type="hidden" name="quantity" value="{{ item.qty + 1 }}">
-                <button type="submit">+</button>
-            </form>
-
-            <form action="/cart/remove/{{ item.id }}{{ table_query }}" method="post">
-                <button type="submit" class="btn-remove">ลบ</button>
-            </form>
-        </div>
-    </div>
-    {% else %}
-    <p class="empty-message">ยังไม่มีสินค้าในตะกร้า</p>
-    {% endfor %}
-
-    <div class="cart-summary">
-        <p>ยอดรวมทั้งหมด: {{ total }} บาท</p>
-        
-        {% if cart_items %}
-        <div class="cart-actions-row">
-            <form action="/cart/send-to-kitchen{{ table_query }}" method="post" style="display: inline;">
-                <button type="submit" class="btn-checkout" style="background: #2b8a3e;">
-                    🍳 ส่งออเดอร์เข้าครัว
-                </button>
-            </form>
-            <a href="/checkout{{ table_query }}" class="btn-checkout">
-                💳 ชำระเงินทันที
-            </a>
-        </div>
-        {% endif %}
-
-        <form action="/cart/clear{{ table_query }}" method="post" style="margin-top: 10px;">
-            <button type="submit" class="btn-clear">ล้างตะกร้า</button>
-        </form>
-    </div>
-
-    <!-- ส่วนแสดงรายการที่ส่งเข้าครัวแล้ว (สะสมในบิลโต๊ะ) -->
+      </article>
+      {% else %}
+      <div class="empty-state commerce-empty"><div class="empty-orbit" aria-hidden="true">＋</div><h3>ยังไม่มีสินค้าในตะกร้า</h3><p>มื้อดี ๆ เริ่มจากจานที่ชอบ<br>เลือกเมนูแรกของคุณได้เลย</p><a href="/{{ table_query }}" class="button button-primary">ค้นพบเมนูโปรด →</a></div>
+      {% endfor %}
+      {% if cart_items %}<form action="/cart/clear{{ table_query }}" method="post" class="cart-clear-form"><button type="submit" class="button button-ghost">ล้างรายการที่ยังไม่ส่งครัว</button></form>{% endif %}
+    </section>
     {% if kitchen_items %}
-    <div class="kitchen-box">
-        <div class="kitchen-header">
-            <span class="kitchen-title">
-                👨‍🍳 อาหารที่ส่งเข้าครัวแล้ว {% if table_id %}• โต๊ะ {{ table_id }}{% endif %}
-            </span>
-            <span class="kitchen-badge">⏳ กำลังปรุง / เสิร์ฟ</span>
-        </div>
-
-        <table class="kitchen-list">
-            <thead>
-                <tr>
-                    <th>รายการ</th>
-                    <th>จำนวน</th>
-                    <th>ราคา</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in kitchen_items %}
-                <tr>
-                    <td>{{ item.name }}</td>
-                    <td>{{ item.qty }} จาน</td>
-                    <td>{{ "%.2f"|format(item.price * item.qty) }} บาท</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-
-        <div class="kitchen-footer">
-            <div class="kitchen-total">
-                {% if shared_paid is defined and shared_paid > 0 %}
-                ยอดคงเหลือที่ต้องชำระ: {{ "%.2f"|format(remaining_kitchen_total) }} บาท
-                <br><small style="color: #2b8a3e; font-size: 0.85rem; font-weight: normal;">(รวมที่สั่งไปแล้ว {{ "%.2f"|format(kitchen_total) }} บาท • หักจ่ายไปแล้ว -{{ "%.2f"|format(shared_paid) }} บาท)</small>
-                {% else %}
-                ยอดรวมที่สั่งไปแล้ว: {{ "%.2f"|format(kitchen_total) }} บาท
-                {% endif %}
-            </div>
-            <a href="/checkout{{ table_query }}" class="btn-checkout" style="background: #d9480f; text-decoration: none;">
-                🧾 เรียกเช็คบิล • {{ "%.2f"|format(remaining_kitchen_total|default(kitchen_total)) }} บาท
-            </a>
-        </div>
-    </div>
+    <section class="glass-panel commerce-panel kitchen-panel" aria-labelledby="kitchen-title">
+      <div class="section-heading"><div><p class="eyebrow">IN THE KITCHEN</p><h2 id="kitchen-title">อาหารที่ส่งเข้าครัวแล้ว</h2></div><span class="badge"><span class="status-dot" aria-hidden="true"></span> กำลังปรุง / เสิร์ฟ</span></div>
+      <div class="receipt-lines">{% for item in kitchen_items %}<div class="receipt-line"><div><strong>{{ item.name }}</strong><span class="muted"> × {{ item.qty }}</span></div><span class="price">฿{{ '%.2f'|format(item.price * item.qty) }}</span></div>{% endfor %}</div>
+      {% if shared_paid|default(0) > 0 %}<p class="commerce-credit">ชำระส่วนกลางแล้ว −฿{{ '%.2f'|format(shared_paid) }}</p>{% endif %}
+      <div class="receipt-total"><span>ยอดคงเหลือในครัว</span><strong class="price">฿{{ '%.2f'|format(remaining_kitchen_total|default(kitchen_total)) }}</strong></div>
+      <a href="/checkout{{ table_query }}" class="button button-secondary full-width">เรียกเช็คบิล →</a>
+    </section>
     {% endif %}
-
-    <div style="margin-top: 20px; text-align: center;">
-        <a href="/{{ table_query }}" class="btn-back" style="text-decoration: none;">
-            ← กลับไปเลือกอาหารเพิ่ม
-        </a>
-    </div>
+  </div>
+  <aside class="glass-panel commerce-panel order-summary" aria-labelledby="summary-title">
+    <p class="eyebrow">A LITTLE MOMENT OF JOY</p><h2 id="summary-title">สรุปมื้อของคุณ</h2>
+    <div class="receipt-lines"><div class="receipt-line"><span>อาหารที่เลือก</span><strong>{{ cart_count|default(0) }} รายการ</strong></div>{% if table_id %}<div class="receipt-line"><span>รับประทานที่ร้าน</span><strong>โต๊ะ {{ table_id }}</strong></div>{% endif %}</div>
+    <div class="receipt-total"><span>ยอดรวมทั้งหมด: {{ '%.2f'|format(total) }} บาท</span></div>
+    <p class="summary-price price"><small>฿</small>{{ '%.2f'|format(total) }}</p>
+    {% if cart_items %}
+    <form action="/cart/send-to-kitchen{{ table_query }}" method="post"><button type="submit" class="button button-primary full-width">ส่งออเดอร์เข้าครัว <span aria-hidden="true">↗</span></button></form>
+    <a href="/checkout{{ table_query }}" class="button button-secondary full-width">ชำระเงินทันที</a>
+    <p class="summary-note">รายการที่ส่งแล้วจะรวมอยู่ในบิลโต๊ะ<br>เลือกสั่งเพิ่มได้ทุกเมื่อ</p>
+    {% else %}<p class="summary-note">เลือกรายการเพิ่มเพื่อเริ่มมื้อใหม่<br>อาหารที่ส่งเข้าครัวแล้วจะอยู่ในบิลของคุณ</p>{% endif %}
+  </aside>
 </div>
 {% endblock %}

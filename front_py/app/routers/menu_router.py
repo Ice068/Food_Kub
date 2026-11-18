@@ -86,6 +86,7 @@ class MenuRouter:
             {
                 "title": f"เมนู: {category}" if category else "เมนูอาหาร",
                 "items": items,
+                "all_items": all_items,
                 "categories": categories,
                 "selected_category": category,
                 "recommended_items": (
@@ -109,6 +110,7 @@ class MenuRouter:
 
     async def _random_page(self, request, category, spin):
         all_items, error = await self._catalog()
+        all_items = [item for item in all_items if item.get("available", True)]
 
         categories = list(
             dict.fromkeys(item["category"] for item in all_items)

@@ -42,7 +42,8 @@ class MenuService:
                 name=str(data.get("name")),
                 price=float(data.get("price")),
                 image=str(data.get("image")),
-                category=str(data.get("category"))
+                category=str(data.get("category")),
+                available=data.get("available", True)
             ))
         items.sort(key=lambda x: x.id)
         return items
@@ -57,7 +58,8 @@ class MenuService:
                 name=str(data.get("name")),
                 price=float(data.get("price")),
                 image=str(data.get("image")),
-                category=str(data.get("category"))
+                category=str(data.get("category")),
+                available=data.get("available", True)
             ))
         items.sort(key=lambda x: x.id)
         return items
@@ -72,7 +74,8 @@ class MenuService:
                 name=str(data.get("name")),
                 price=float(data.get("price")),
                 image=str(data.get("image")),
-                category=str(data.get("category"))
+                category=str(data.get("category")),
+                available=data.get("available", True)
             )
         return None
 
@@ -104,4 +107,10 @@ class MenuService:
         if not doc_ref.get().exists:
             return None
         doc_ref.update({"available": bool(available)})
+        return self.get_by_id(item_id)
+    def update_item(self, item_id: int, name: str, price: float, image: str, category: str) -> MenuItem | None:
+        ref = self.db.collection(self.collection_name).document(str(item_id))
+        if not ref.get().exists:
+            return None
+        ref.update({"name": name, "price": price, "image": image, "category": category})
         return self.get_by_id(item_id)

@@ -1,6 +1,7 @@
 from typing import Literal
 
 import httpx
+from app.core.backend import backend_client
 
 from app.core.admin_auth import admin_api_key
 from app.core.config import settings
@@ -22,7 +23,7 @@ class StatsService:
     ) -> bool:
         """คืน False เมื่อส่งข้อมูลไม่สำเร็จ"""
         try:
-            async with httpx.AsyncClient(
+            async with backend_client(
                 timeout=5.0
             ) as client:
                 response = await client.request(
@@ -169,7 +170,7 @@ class StatsService:
             request-payment = เปลี่ยนเป็นรอชำระ
             confirm-payment = ยืนยันรับเงินครบทั้งโต๊ะ
         """
-        async with httpx.AsyncClient(
+        async with backend_client(
             timeout=10.0
         ) as client:
             response = await client.post(
@@ -202,7 +203,7 @@ class StatsService:
         เคลียร์โต๊ะที่ชำระครบแล้ว
         ส่ง opened_at เพื่อป้องกันเคลียร์บิลของลูกค้ารอบใหม่
         """
-        async with httpx.AsyncClient(
+        async with backend_client(
             timeout=10.0
         ) as client:
             response = await client.post(
@@ -236,7 +237,7 @@ class StatsService:
         ready = พร้อมเสิร์ฟ
         served = เสิร์ฟแล้ว
         """
-        async with httpx.AsyncClient(
+        async with backend_client(
             timeout=10.0
         ) as client:
             response = await client.put(
@@ -261,7 +262,7 @@ class StatsService:
     # ---------- อ่านข้อมูล Dashboard ----------
 
     async def get_dashboard(self) -> dict:
-        async with httpx.AsyncClient(
+        async with backend_client(
             timeout=10.0
         ) as client:
             response = await client.get(
@@ -278,7 +279,7 @@ class StatsService:
         item_id: int,
         available: bool,
     ) -> bool:
-        async with httpx.AsyncClient(
+        async with backend_client(
             timeout=10.0
         ) as client:
             response = await client.post(

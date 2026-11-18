@@ -3,6 +3,7 @@ import sys
 import unittest
 from html.parser import HTMLParser
 from pathlib import Path
+from urllib.parse import urlsplit, parse_qs
 from unittest.mock import AsyncMock, patch
 import httpx
 
@@ -12,6 +13,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "front_py"))
 from app.models.menu_item import MenuItem
+from app.core.admin_auth import create_admin_token
 from app.routers.cart_router import CartRouter
 from app.routers.menu_router import MenuRouter
 from app.routers.table_router import TableRouter
@@ -29,7 +31,7 @@ class FakeStatsBackend:
         self.live = {}
         self.orders = []
         self.transactions = []
-        self.table_count = 5
+        self.table_count = 100
         self._tick = 0
 
     def _stamp(self):
@@ -140,6 +142,9 @@ class TableQrTests(unittest.TestCase):
         )
         live_patch.start()
         self.addCleanup(live_patch.stop)
+        key_patch = patch("app.services.table_settings_service.admin_api_key", return_value="test-internal-key")
+        key_patch.start()
+        self.addCleanup(key_patch.stop)
         app.include_router(MenuRouter(menu, templates, cart).router)
         app.include_router(CartRouter(cart, menu, templates, self.stats).router)
         app.include_router(TableRouter(templates).router)
@@ -176,9 +181,13 @@ class TableQrTests(unittest.TestCase):
                 self.assertEqual(response.url.params["table"], str(table))
                 page = PageLinks(response.text)
                 for url in page.links:
+                    parsed = urlsplit(url)
+                    if not parsed.path or parsed.path.startswith("/admin"):
+                        continue  # In-page anchors and staff navigation are not customer table routes.
+                    self.assertEqual(parse_qs(parsed.query).get("table"), [str(table)])
                     linked = self.client.get(url)
                     self.assertEqual(linked.status_code, 200)
-                    self.assertIn(f"โต๊ะ {table}", linked.text)
+                    self.assertIn(f"โต๊ะ {table:02d}", linked.text)
                 added = self.client.post(page.forms[0])
                 self.assertEqual(added.url.params["table"], str(table))
                 self.assertIn("ยอดรวมทั้งหมด: 50", added.text)
@@ -240,11 +249,11 @@ class TableQrTests(unittest.TestCase):
         self.assertIn("ยังไม่มีสินค้าในตะกร้า", other.get("/cart?table=1").text)
 
     def test_no_scan_shows_prompt_and_legacy_cart_stays_separate(self):
-        self.assertIn("ยังไม่ได้ระบุโต๊ะ", self.client.get("/").text)
+        self.assertIn("เลือกเมนู แล้วสแกน QR ที่โต๊ะ", self.client.get("/").text)
         self.client.post("/cart/add/1")
         self.client.get("/?table=1")
         self.assertIn("ยังไม่มีสินค้าในตะกร้า", self.client.get("/cart?table=1").text)
-        self.assertIn("ยังไม่ได้ระบุโต๊ะ", self.client.get("/").text)
+        self.assertIn("เลือกเมนู แล้วสแกน QR ที่โต๊ะ", self.client.get("/").text)
         self.assertIn("ยอดรวมทั้งหมด: 50", self.client.get("/cart").text)
 
     def test_existing_session_carts_survive_and_old_active_table_is_ignored(self):
@@ -254,7 +263,7 @@ class TableQrTests(unittest.TestCase):
         legacy = {"table_id": 1, "cart": {"1": 2}, "cart_table_1": {"1": 3}}
         cookie = TimestampSigner("test-only").sign(base64.b64encode(json.dumps(legacy).encode())).decode()
         self.client.cookies.set("session", cookie, domain="testserver.local", path="/")
-        self.assertIn("ยังไม่ได้ระบุโต๊ะ", self.client.get("/").text)
+        self.assertIn("เลือกเมนู แล้วสแกน QR ที่โต๊ะ", self.client.get("/").text)
         self.assertIn("ยอดรวมทั้งหมด: 100", self.client.get("/cart").text)
         self.assertIn("ยอดรวมทั้งหมด: 150", self.client.get("/cart?table=1").text)
 
@@ -321,12 +330,13 @@ class TableQrTests(unittest.TestCase):
         self.payment.process.assert_not_awaited()
 
     def test_qr_payloads_match_printed_links(self):
+        self.stats.table_count = 5
         import qrcode
-        self.client.cookies.set("admin_token", "logged_in")
+        self.client.cookies.set("admin_token", create_admin_token())
         with patch("app.routers.table_router.qrcode.make", wraps=qrcode.make) as make:
             response = self.client.get("/admin/tables", params={"base_url": "https://menu.example.com/"})
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.text.count("<svg"), 5)
+        self.assertEqual(response.text.count('class="qr-svg"'), 5)
         self.assertEqual([call.args[0] for call in make.call_args_list], [
             f"https://menu.example.com/?table={i}" for i in range(1, 6)
         ])
@@ -334,15 +344,15 @@ class TableQrTests(unittest.TestCase):
             self.assertIn(f'https://menu.example.com/?table={table}', response.text)
 
     def test_invalid_base_urls_do_not_generate_qr(self):
-        self.client.cookies.set("admin_token", "logged_in")
+        self.client.cookies.set("admin_token", create_admin_token())
         for url in ("javascript:alert(1)", "https://site.test/?table=8", "https://site.test/#x", "http://user:pass@site.test", "http://site.test:bad", ""):
             with self.subTest(url=url):
                 response = self.client.get("/admin/tables", params={"base_url": url})
                 self.assertIn('role="alert"', response.text)
-                self.assertNotIn("<svg", response.text)
+                self.assertNotIn('class="qr-svg"', response.text)
 
     def test_qr_count_is_saved_to_backend_and_links_select_each_table(self):
-        self.client.cookies.set("admin_token", "logged_in")
+        self.client.cookies.set("admin_token", create_admin_token())
         for count in (1, 10):
             response = self.client.post(
                 "/admin/tables",
@@ -350,14 +360,15 @@ class TableQrTests(unittest.TestCase):
             )  # follows the 303 redirect back to the QR page
             self.assertEqual(response.status_code, 200)
             self.assertEqual(self.stats.table_count, count)
-            self.assertEqual(response.text.count("<svg"), count)
+            self.assertEqual(response.text.count('class="qr-svg"'), count)
             self.assertIn(f"พิมพ์ QR ทั้ง {count} โต๊ะ", response.text)
             for table in range(1, count + 1):
                 self.assertIn(f'http://testserver/?table={table}', response.text)
-                self.assertIn(f"โต๊ะ {table}", self.client.get(f"/?table={table}").text)
+                self.assertIn(f"โต๊ะ {table:02d}", self.client.get(f"/?table={table}").text)
 
     def test_invalid_qr_counts_are_rejected(self):
-        self.client.cookies.set("admin_token", "logged_in")
+        self.stats.table_count = 5
+        self.client.cookies.set("admin_token", create_admin_token())
         for value in (0, -1, 101, "abc", "2.5"):
             with self.subTest(value=value):
                 response = self.client.post(
@@ -368,7 +379,8 @@ class TableQrTests(unittest.TestCase):
         self.assertEqual(self.stats.table_count, 5)
 
     def test_invalid_base_url_is_not_saved(self):
-        self.client.cookies.set("admin_token", "logged_in")
+        self.stats.table_count = 5
+        self.client.cookies.set("admin_token", create_admin_token())
         response = self.client.post(
             "/admin/tables",
             data={"base_url": "javascript:alert(1)", "table_count": 3},
@@ -377,7 +389,8 @@ class TableQrTests(unittest.TestCase):
         self.assertEqual(self.stats.table_count, 5)
 
     def test_localhost_warning_and_public_url_setting(self):
-        self.client.cookies.set("admin_token", "logged_in")
+        self.stats.table_count = 5
+        self.client.cookies.set("admin_token", create_admin_token())
         response = self.client.get("/admin/tables", params={"base_url": "http://localhost:8001"})
         self.assertIn("URL นี้ใช้ได้เฉพาะเครื่องเซิร์ฟเวอร์", response.text)
         with patch.dict("os.environ", {"PUBLIC_BASE_URL": "https://food.example.com"}):

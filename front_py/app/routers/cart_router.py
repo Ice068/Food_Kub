@@ -1,9 +1,10 @@
 import httpx
 
-from fastapi import APIRouter, Depends, Form, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import APIRouter, Depends, Form, Request, HTTPException
+from fastapi.responses import RedirectResponse, JSONResponse
 
 from app.core.table_context import set_table_context, table_query
+from app.core.config import settings
 from app.services.cart_service import CartService
 from app.services.menu_service import MenuService
 from app.services.stats_service import StatsService, build_lines
@@ -30,6 +31,7 @@ class CartRouter:
         self._register_routes()
 
     def _register_routes(self):
+        self.router.add_api_route("/cart/state", self.cart_state, methods=["GET"])
         self.router.add_api_route(
             "/cart",
             self.show_cart,
@@ -90,6 +92,8 @@ class CartRouter:
                     "name": menu_item.name,
                     "price": menu_item.price,
                     "qty": qty,
+                    "image_url": menu_item.image_url,
+                    "category": menu_item.category,
                 })
 
         active_orders = self.cart_service.get_active_orders(
@@ -112,6 +116,8 @@ class CartRouter:
                     "name": menu_item.name,
                     "price": menu_item.price,
                     "qty": qty,
+                    "image_url": menu_item.image_url,
+                    "category": menu_item.category,
                 })
 
         shared_paid = float(self.cart_service.get_shared_paid(request))
@@ -141,6 +147,8 @@ class CartRouter:
     # ---------- ส่งอาหารเข้าครัว ----------
 
     async def send_to_kitchen(self, request: Request):
+        if getattr(request.state, "table_id", None) is None and not settings.DEMO_MODE:
+            raise HTTPException(409, "กรุณาสแกน QR ที่โต๊ะก่อนส่งอาหารเข้าครัว รายการที่เลือกยังอยู่ในตะกร้า")
         new_quantities = dict(
             self.cart_service.get_cart(request)
         )
@@ -150,6 +158,11 @@ class CartRouter:
                 url=f"/cart{table_query(request)}",
                 status_code=303,
             )
+
+        for item_id, quantity in new_quantities.items():
+            item = await self.menu_service.get_by_id(int(item_id))
+            if not item or not item.available or not 1 <= quantity <= 99:
+                raise HTTPException(409, "มีเมนูที่ไม่พร้อมจำหน่าย กรุณาตรวจสอบตะกร้าก่อนส่งครัว")
 
         active_quantities = dict(
             self.cart_service.get_active_orders(request)
@@ -183,11 +196,7 @@ class CartRouter:
                 )
 
                 if not synced:
-                    return HTMLResponse(
-                        "บิลเปลี่ยนหรือส่งครัวไม่สำเร็จ "
-                        "กรุณากลับไปโหลดตะกร้าใหม่",
-                        status_code=409,
-                    )
+                    raise HTTPException(409, "บิลเปลี่ยนหรือส่งครัวไม่สำเร็จ กรุณากลับไปโหลดตะกร้าใหม่")
 
             # ล้างตะกร้าเมื่อบันทึกบิลสำเร็จแล้ว
             self.cart_service.send_cart_to_kitchen(request)
@@ -202,11 +211,8 @@ class CartRouter:
                 new_items,
             )
 
-        except httpx.HTTPError:
-            return HTMLResponse(
-                "ติดต่อ Backend ไม่ได้ กรุณาลองใหม่",
-                status_code=503,
-            )
+        except httpx.HTTPError as exc:
+            raise HTTPException(503, "ติดต่อครัวไม่ได้ กรุณาลองใหม่") from exc
 
         t_query = table_query(request)
         delim = "&" if t_query else "?"
@@ -223,7 +229,16 @@ class CartRouter:
         request: Request,
         item_id: int,
     ):
+        item = await self.menu_service.get_by_id(item_id)
+        if not item:
+            raise HTTPException(404, "ไม่พบเมนูนี้")
+        if not item.available:
+            raise HTTPException(409, "เมนูนี้หมดชั่วคราว")
+        if self.cart_service.get_cart(request).get(str(item_id), 0) >= 99:
+            raise HTTPException(422, "สั่งได้สูงสุด 99 จานต่อเมนู")
         self.cart_service.add_item(request, item_id)
+        if self._wants_json(request):
+            return await self.cart_state(request, "เพิ่มลงตะกร้าแล้ว")
 
         return RedirectResponse(
             url=f"/cart{table_query(request)}",
@@ -236,13 +251,18 @@ class CartRouter:
         self,
         request: Request,
         item_id: int,
-        quantity: int = Form(...),
+        quantity: int = Form(..., ge=0, le=99),
     ):
+        item = await self.menu_service.get_by_id(item_id)
+        if quantity > 0 and (not item or not item.available):
+            raise HTTPException(409, "เมนูนี้ไม่พร้อมจำหน่าย")
         self.cart_service.update_quantity(
             request,
             item_id,
             quantity,
         )
+        if self._wants_json(request):
+            return await self.cart_state(request, "อัปเดตจำนวนแล้ว")
 
         return RedirectResponse(
             url=f"/cart{table_query(request)}",
@@ -257,6 +277,8 @@ class CartRouter:
         item_id: int,
     ):
         self.cart_service.remove_item(request, item_id)
+        if self._wants_json(request):
+            return await self.cart_state(request, "นำออกจากตะกร้าแล้ว")
 
         return RedirectResponse(
             url=f"/cart{table_query(request)}",
@@ -265,10 +287,28 @@ class CartRouter:
 
     # ---------- ล้างเฉพาะตะกร้าที่ยังไม่ส่งครัว ----------
 
-    def clear_cart(self, request: Request):
+    async def clear_cart(self, request: Request):
         self.cart_service.clear(request)
+        if self._wants_json(request):
+            return await self.cart_state(request, "ล้างตะกร้าแล้ว")
 
         return RedirectResponse(
             url=f"/cart{table_query(request)}",
             status_code=303,
         )
+    @staticmethod
+    def _wants_json(request: Request) -> bool:
+        return "application/json" in request.headers.get("accept", "")
+
+    async def cart_state(self, request: Request, message: str = ""):
+        cart = dict(self.cart_service.get_cart(request))
+        items = []
+        for key, qty in cart.items():
+            item = await self.menu_service.get_by_id(int(key))
+            if item:
+                items.append({**item.to_dict(), "qty": qty})
+        return JSONResponse({"ok": True, "cart": cart, "items": items,
+            "total": round(sum(item["price"] * item["qty"] for item in items), 2),
+            "cart_count": self.cart_service.total_count(request),
+            "bill_count": self.cart_service.bill_total_count(request), "message": message},
+            headers={"Cache-Control": "no-store"})

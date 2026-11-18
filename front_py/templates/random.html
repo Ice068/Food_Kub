@@ -1,151 +1,22 @@
 {% extends "base.html" %}
 {% from "partials/food_card.html" import food_card with context %}
-
-{% block extra_head %}
-<link rel="stylesheet" href="/static/discovery.css">
-{% endblock %}
-
+{% block extra_head %}<link rel="stylesheet" href="/static/discovery.css"><link rel="stylesheet" href="/static/commerce.css">{% endblock %}
 {% block content %}
-<section class="discovery-hero">
-    <div>
-        <p class="eyebrow">FOOD KUB • ให้มื้อนี้มีคำตอบ</p>
-        <h1>วันนี้กินอะไรดี?</h1>
-        <p>เลือกหมวดที่อยากกิน แล้วให้วงล้อช่วยตัดสินใจ</p>
-    </div>
-
-    <a class="discovery-back" href="/{{ table_query }}">← กลับไปดูเมนู</a>
-</section>
-
-{% if error %}
-<div class="discovery-notice" role="alert">
-    {{ error }}
-    <a href="/random{{ table_query }}">ลองใหม่</a>
-</div>
-{% else %}
-
+<header class="page-heading commerce-heading"><div><p class="eyebrow">A LITTLE SERENDIPITY</p><h1>วันนี้กินอะไรดี?</h1><p class="muted">ปล่อยให้ความอร่อยเซอร์ไพรส์คุณ เลือกหมวด แล้วลองหมุนดู</p></div><a class="button button-secondary" href="/{{ table_query }}">← กลับไปดูเมนู</a></header>
+{% if error %}<div class="status-banner" role="alert">{{ error }} <a href="/random{{ table_query }}" class="button button-secondary">ลองใหม่</a></div>{% else %}
 <div class="random-layout">
-    <section class="wheel-panel" aria-label="วงล้อสุ่มอาหาร">
-        <form action="/random" method="get" class="wheel-filter">
-            {% if table_id %}
-            <input type="hidden" name="table" value="{{ table_id }}">
-            {% endif %}
-            <label for="wheel-category">สุ่มจากหมวด</label>
-
-            <div class="filter-row">
-                <select id="wheel-category" name="category">
-                    <option value="">ทั้งหมด</option>
-
-                    {% for cat in categories %}
-                    <option
-                        value="{{ cat }}"
-                        {% if cat == selected_category %}selected{% endif %}
-                    >{{ cat }}</option>
-                    {% endfor %}
-                </select>
-
-                <button class="filter-button" type="submit">
-                    เลือกหมวด
-                </button>
-            </div>
-        </form>
-
-        {% if wheel_items %}
-        <div class="wheel-stage" aria-hidden="true">
-            <div class="wheel-pointer"></div>
-
-            <div
-                class="food-wheel {% if spinning %}is-spinning{% endif %}"
-                style="background: {{ gradient }}; --stop-angle: {{ rotation }}deg;"
-            >
-                {% for segment in segments %}
-                <span
-                    class="wheel-number"
-                    style="--label-angle: {{ segment.angle }}deg;"
-                >{{ segment.number }}</span>
-                {% endfor %}
-            </div>
-
-            <div class="wheel-center">
-                กินอะไร<br><strong>ดีนะ?</strong>
-            </div>
-        </div>
-
-        <form action="/random{{ table_query }}" method="post">
-            <input
-                type="hidden"
-                name="category"
-                value="{{ selected_category }}"
-            >
-
-            <button class="spin-button" type="submit">
-                {% if winner %}หมุนอีกครั้ง{% else %}หมุนวงล้อ{% endif %}
-                ↻
-            </button>
-        </form>
-
-        <p class="wheel-help">
-            กดหมุนแล้วหน้าเว็บจะโหลดใหม่
-            ก่อนวงล้อหมุนประมาณ 4 วินาที
-        </p>
-
-        {% if pool_count > wheel_items|length %}
-        <p class="wheel-help">
-            มี {{ pool_count }} เมนู •
-            สุ่มเข้าวงล้อครั้งละ {{ wheel_items|length }} เมนู
-            ทุกเมนูมีโอกาสเท่ากัน
-        </p>
-        {% endif %}
-
-        {% else %}
-        <div class="wheel-empty">
-            <span>🍽️</span>
-            <h2>ไม่พบเมนูในหมวดนี้</h2>
-            <p>ลองเลือกหมวดอื่น หรือกลับมาดูใหม่ภายหลัง</p>
-            <a href="/random{{ table_query }}">ดูทุกหมวด</a>
-        </div>
-        {% endif %}
-    </section>
-
-    <aside class="wheel-details">
-        {% if winner %}
-        <section
-            class="wheel-result {% if spinning %}reveal-result{% endif %}"
-            aria-label="ผลการสุ่ม"
-        >
-            <p class="eyebrow">มื้อนี้ได้คำตอบแล้ว</p>
-            <h2>ช่อง {{ winner_index + 1 }} • {{ winner.name }}</h2>
-
-            {{ food_card(winner) }}
-        </section>
-        {% else %}
-        <div class="result-intro">
-            <p class="eyebrow">ไม่ต้องคิดนาน</p>
-            <h2>มื้อนี้ให้วงล้อเลือก</h2>
-            <p>
-                หมุนได้เรื่อย ๆ จนเจอจานที่ใช่
-                แล้วเพิ่มลงตะกร้าได้เลย
-            </p>
-        </div>
-        {% endif %}
-
-        {% if segments %}
-        <section class="wheel-legend">
-            <h2>เมนูบนวงล้อ</h2>
-
-            <ol>
-                {% for segment in segments %}
-                <li>
-                    <span>{{ segment.item.name }}</span>
-                    <strong>
-                        {{ '%.2f'|format(segment.item.price) }} ฿
-                    </strong>
-                </li>
-                {% endfor %}
-            </ol>
-        </section>
-        {% endif %}
-    </aside>
+  <section class="glass-panel commerce-panel wheel-panel" aria-label="วงล้อสุ่มอาหาร">
+    <form action="/random" method="get" class="wheel-filter">{% if table_id %}<input type="hidden" name="table" value="{{ table_id }}">{% endif %}<label for="wheel-category">อยากอร่อยกับหมวดไหน?</label><div class="wheel-filter-row"><select id="wheel-category" name="category" class="field"><option value="">ทุกความอร่อย</option>{% for cat in categories %}<option value="{{ cat }}" {% if cat == selected_category %}selected{% endif %}>{{ cat }}</option>{% endfor %}</select><button class="button button-secondary" type="submit">เลือกหมวด</button></div></form>
+    {% if wheel_items %}
+    <div class="wheel-stage" aria-hidden="true"><div class="wheel-pointer"></div><div class="food-wheel {% if spinning %}is-spinning{% endif %}" style="background: {{ gradient }}; --stop-angle: {{ rotation }}deg;">{% for segment in segments %}<span class="wheel-number" style="--label-angle: {{ segment.angle }}deg;">{{ segment.number }}</span>{% endfor %}</div><div class="wheel-center"><span>FOOD KUB</span><strong>กินอะไรดี?</strong></div></div>
+    <form action="/random{{ table_query }}" method="post"><input type="hidden" name="category" value="{{ selected_category }}"><button class="button button-primary full-width spin-button" type="submit"><span aria-hidden="true">↻</span> {% if winner %}ลองอีกสักครั้ง{% else %}หมุนหาจานที่ใช่{% endif %}</button></form>
+    <p class="summary-note">ทุกเมนูมีโอกาสเป็นจานโปรดของมื้อนี้{% if pool_count > wheel_items|length %}<br>สุ่มจาก {{ pool_count }} เมนู เข้าวงล้อครั้งละ {{ wheel_items|length }} เมนู{% endif %}</p>
+    {% else %}<div class="empty-state commerce-empty"><div class="empty-orbit" aria-hidden="true">↻</div><h2>ยังไม่มีเมนูในหมวดนี้</h2><p>ลองเปิดใจให้ความอร่อยหมวดอื่นดู</p><a href="/random{{ table_query }}" class="button button-primary">ดูทุกหมวด</a></div>{% endif %}
+  </section>
+  <aside class="wheel-details">
+    {% if winner %}<section class="wheel-result {% if spinning %}reveal-result{% endif %}" aria-label="ผลการสุ่ม"><p class="eyebrow">YOUR DELICIOUS DESTINATION</p><h2>จานนี้รอคุณอยู่</h2><p class="muted">ช่อง {{ winner_index + 1 }} · {{ winner.name }}</p>{{ food_card(winner) }}</section>{% else %}<div class="glass-panel commerce-panel result-intro"><span class="serendipity-mark" aria-hidden="true">✳</span><p class="eyebrow">TRUST YOUR NEXT BITE</p><h2>บางครั้ง จานที่ใช่<br>ก็มาโดยไม่ได้นัดหมาย</h2><p class="muted">หมุนได้เรื่อย ๆ จนเจอจานที่อยากลอง<br>แล้วเพิ่มลงตะกร้าได้เลย</p></div>{% endif %}
+    {% if segments %}<section class="glass-panel commerce-panel wheel-legend"><div class="section-heading"><h2>ความอร่อยบนวงล้อ</h2><span class="badge">{{ segments|length }} เมนู</span></div><ol>{% for segment in segments %}<li><span class="wheel-legend-number">{{ segment.number }}</span><span>{{ segment.item.name }}</span><strong class="price">฿{{ '%.0f'|format(segment.item.price) }}</strong></li>{% endfor %}</ol></section>{% endif %}
+  </aside>
 </div>
-
 {% endif %}
 {% endblock %}

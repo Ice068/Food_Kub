@@ -1,80 +1,30 @@
 {% extends "base.html" %}
 {% from "partials/food_card.html" import food_card with context %}
-
-{% block extra_head %}
-<link rel="stylesheet" href="/static/discovery.css">
-{% endblock %}
-
+{% from "partials/icons.html" import icon %}
+{% block extra_head %}<link rel="stylesheet" href="/static/discovery.css">{% endblock %}
 {% block content %}
-<section class="discovery-hero">
-    <div>
-        <p class="eyebrow">FOOD KUB • มื้ออร่อยของคุณ</p>
-        <h1>{{ title }}</h1>
-        <p>เลือกจานที่ชอบ หรือให้วงล้อช่วยเลือกมื้อนี้</p>
-    </div>
-
-    <a class="discovery-link" href="/random{{ table_query }}">
-        🎡 วันนี้กินอะไรดี?
-    </a>
-</section>
-
-{% if error %}
-<div class="discovery-notice" role="alert">
-    {{ error }}
-    <a href="/{{ table_query }}">ลองใหม่</a>
+<div class="store-layout">
+<div class="store-main">
+    <section class="discovery-hero glass-panel" id="recommended" aria-labelledby="hero-title">
+        <div class="hero-copy"><p class="eyebrow"><span class="tiny-line"></span> GOOD FOOD, GOOD MOOD</p><h1 id="hero-title">มื้อดี ๆ<br>เริ่มต้น<span>ที่นี่.</span></h1><p class="hero-description">จานโปรดที่คุ้นเคย รสชาติที่คิดถึง<br>เลือกความอร่อย แล้วให้เราดูแลมื้อนี้</p><a href="#menu" class="button button-primary">เลือกเมนูที่ใช่ {{ icon('arrow-right') }}</a><div class="hero-note">{{ icon('leaf') }} ปรุงสดทุกจาน <span>·</span> ด้วยความใส่ใจ</div></div>
+        {% if recommended_items %}{% set featured = recommended_items[0] %}<div class="hero-visual"><div class="hero-orbit" aria-hidden="true"></div><img class="hero-food" src="{{ featured.image_url or '/static/images/menu-placeholder.svg' }}" alt="{{ featured.name }}" width="480" height="480" fetchpriority="high"><span class="hero-sparkle" aria-hidden="true">✳</span><a class="hero-dish-tag glass-panel" href="#menu"><span class="chef-icon">{{ icon('sparkles') }}</span><span><small>จานแนะนำจากครัว</small><strong>{{ featured.name }}</strong></span>{{ icon('arrow-up-right') }}</a></div>{% else %}<div class="hero-visual"><img class="hero-food" src="/static/images/pad_kra_pao.jpg" alt="อาหารปรุงสดจากครัว Food Kub" width="480" height="480" fetchpriority="high"></div>{% endif %}
+    </section>
+    <section class="menu-section" id="menu" aria-labelledby="menu-title">
+        <div class="section-heading"><div><p class="eyebrow">FIND YOUR NEXT FAVORITE</p><h2 id="menu-title">วันนี้อยากทานอะไร?</h2></div><span class="menu-item-count"><span id="visible-count">{{ items | length }}</span> เมนูให้เลือก</span></div>
+        {% if error %}<div class="empty-state glass-panel" role="alert">{{ icon('info') }}<h3>ครัวกำลังเชื่อมต่ออีกครั้ง</h3><p>{{ error }}</p><a class="button button-primary" href="/{{ table_query }}">ลองอีกครั้ง</a></div>{% else %}
+        <div class="catalog-toolbar"><label class="search-field">{{ icon('search') }}<input type="search" id="menu-search" placeholder="ค้นหาจานโปรดของคุณ…" aria-label="ค้นหาเมนู" autocomplete="off"><kbd>⌘ K</kbd></label><label class="sort-field"><span class="sr-only">เรียงเมนู</span><select id="menu-sort"><option value="recommended">แนะนำ</option><option value="price-asc">ราคาน้อย → มาก</option><option value="price-desc">ราคามาก → น้อย</option><option value="name">ชื่อเมนู ก–ฮ</option></select>{{ icon('chevron-down') }}</label></div>
+        <div class="catalog-filters"><div class="category-bar liquid-tabs" aria-label="หมวดหมู่อาหาร"><span class="liquid-indicator" aria-hidden="true"></span><a href="/{{ table_query }}#menu" data-category="" class="category-chip {{ 'is-active' if not selected_category else '' }}" {% if not selected_category %}aria-current="true"{% endif %}>{{ icon('grid') }} ทั้งหมด</a>{% for cat in categories %}<a href="/category/{{ cat | urlencode }}{{ table_query }}#menu" data-category="{{ cat }}" class="category-chip {{ 'is-active' if selected_category == cat else '' }}" {% if selected_category == cat %}aria-current="true"{% endif %}>{{ icon('coffee' if 'ดื่ม' in cat else 'utensils') }} {{ cat }}</a>{% endfor %}</div><button type="button" id="favorites-filter" class="filter-favorite icon-button" aria-label="แสดงเฉพาะจานโปรด" aria-pressed="false" data-tooltip="เฉพาะจานโปรด">{{ icon('heart') }}</button></div>
+        <div class="active-filters" id="active-filters" hidden><span id="filter-description"></span><button class="text-button" id="reset-filters">ล้างตัวกรอง {{ icon('x') }}</button></div>
+        <div class="menu-grid" id="menu-grid" data-selected-category="{{ selected_category }}">{% for item in all_items | default(items) %}{{ food_card(item, loop.index0, selected_category) }}{% endfor %}</div>
+        <div id="catalog-empty" class="empty-state glass-panel" {% if items %}hidden{% endif %}>{{ icon('search') }}<h3>ยังไม่เจอจานที่มองหา</h3><p>ลองคำค้นใหม่ หรือเลือกหมวดหมู่อื่นดูนะ</p><button class="button button-secondary" id="empty-reset">ดูเมนูทั้งหมด</button></div>
+        {% endif %}
+    </section>
+    <a class="surprise-card glass-panel" href="/random{{ table_query }}"><span class="surprise-icon">{{ icon('shuffle') }}</span><span><strong>เลือกไม่ถูก? ให้เราเลือกให้</strong><small>หมุนวงล้อ แล้วค้นพบจานโปรดจานใหม่</small></span><span class="surprise-arrow">{{ icon('arrow-up-right') }}</span></a>
 </div>
-
-{% else %}
-
-{% if not selected_category %}
-<section id="recommended" class="recommended-section">
-    <div class="section-heading">
-        <div>
-            <p class="eyebrow">ลองจานนี้ไหม</p>
-            <h2>เมนูแนะนำ</h2>
-        </div>
-        <span>จานที่เราคัดมาให้</span>
-    </div>
-
-    <div class="menu-grid">
-        {% for item in recommended_items %}
-            {{ food_card(item) }}
-        {% else %}
-        <p class="empty-message">
-            ยังไม่มีเมนูแนะนำ ลองเลือกจากเมนูด้านล่างได้เลย
-        </p>
-        {% endfor %}
-    </div>
-</section>
-{% endif %}
-
-<section aria-label="รายการอาหาร">
-    <h2 class="all-menu-heading">เลือกอาหารของคุณ</h2>
-
-    <div class="category-bar">
-        <a
-            href="/{{ table_query }}"
-            class="category-chip {% if not selected_category %}is-active{% endif %}"
-            {% if not selected_category %}aria-current="page"{% endif %}
-        >ทั้งหมด</a>
-
-        {% for cat in categories %}
-        <a
-            href="/category/{{ cat }}{{ table_query }}"
-            class="category-chip {% if selected_category == cat %}is-active{% endif %}"
-            {% if selected_category == cat %}aria-current="page"{% endif %}
-        >{{ cat }}</a>
-        {% endfor %}
-    </div>
-
-    <div class="menu-grid">
-        {% for item in items %}
-            {{ food_card(item) }}
-        {% else %}
-        <p class="empty-message">ไม่พบเมนูในหมวดหมู่นี้</p>
-        {% endfor %}
-    </div>
-</section>
-
-{% endif %}
+<aside class="order-sidebar" aria-label="สรุปตะกร้า">
+    <section class="order-panel glass-panel"><div class="order-heading"><div><p class="eyebrow">YOUR GOOD FOOD</p><h2>มื้อของคุณ</h2></div><span class="order-icon">{{ icon('bag') }}</span></div><div class="order-table"><span>{{ icon('pin') }} {% if table_id is not none %}โต๊ะ {{ '%02d'|format(table_id) }}{% else %}ตะกร้าของคุณ{% endif %}</span><span class="badge">ทานที่ร้าน</span></div><div id="sidebar-items" class="sidebar-items"><div class="order-empty"><span class="empty-bag">{{ icon('bag') }}</span><strong>มื้ออร่อยกำลังรออยู่</strong><p>เลือกเมนูที่ชอบ แล้วเพิ่มลงตะกร้า<br>เริ่มต้นความอร่อยได้เลย</p></div></div><div class="order-totals"><div><span>รายการอาหาร</span><span><b data-cart-count>{{ cart_count | default(0) }}</b> รายการ</span></div><div class="order-total"><span>รวมทั้งหมด</span><strong id="sidebar-total">฿0.00</strong></div></div><a class="button button-primary full-width" href="/cart{{ table_query }}">ดูตะกร้าของฉัน {{ icon('arrow-right') }}</a><p class="order-footnote">{{ icon('info') }} ตรวจสอบรายการก่อนส่งเข้าครัว</p></section>
+    <section class="little-note glass-panel"><span>{{ icon('leaf') }}</span><div><h3>ความอร่อยที่ใส่ใจ</h3><p>มีข้อจำกัดเรื่องอาหาร?<br>แจ้งพนักงานก่อนสั่งได้เลย</p></div></section>
+    <div class="sidebar-signature"><span>made with care</span><svg viewBox="0 0 100 30" aria-hidden="true"><path d="M3 20Q20 1 22 17T42 18T62 12Q69 26 77 8T96 15"/></svg></div>
+</aside>
+</div>
 {% endblock %}

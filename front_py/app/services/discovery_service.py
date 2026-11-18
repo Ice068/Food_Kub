@@ -8,12 +8,12 @@ RECOMMENDED_IDS = (1, 3, 7)
 MAX_WHEEL_ITEMS = 12
 
 WHEEL_COLORS = (
-    "#d9480f",
-    "#ffd8a8",
-    "#2b8a3e",
-    "#d3f9d8",
-    "#e67700",
-    "#fff3bf",
+    "#c7dcca",
+    "#e2e8da",
+    "#709482",
+    "#e9e6d4",
+    "#a8c4b2",
+    "#d8ded9",
 )
 
 
@@ -26,7 +26,10 @@ class DiscoveryService:
         if not value:
             return ""
 
-        parsed = urlsplit(value)
+        try:
+            parsed = urlsplit(value)
+        except ValueError:
+            return ""
 
         if parsed.scheme in ("http", "https") and parsed.netloc:
             return value
@@ -64,12 +67,13 @@ class DiscoveryService:
         return [
             by_id[item_id]
             for item_id in RECOMMENDED_IDS
-            if item_id in by_id
+            if item_id in by_id and by_id[item_id].get("available", True)
         ]
 
     @staticmethod
     def build_wheel(items, spin=False, rng=None):
         rng = rng or random.SystemRandom()
+        items = [item for item in items if item.get("available", True)]
 
         # ถ้ามีเกิน 12 เมนู สุ่มเข้าวงล้อครั้งละ 12 เมนู
         if spin and len(items) > MAX_WHEEL_ITEMS:

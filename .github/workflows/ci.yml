@@ -31,7 +31,7 @@ jobs:
       - name: Verify Python syntax compilation
         run: python -m compileall front_py blackend_py tests
 
-      - name: Run automated unit tests (25 tests)
+      - name: Run automated unit and integration tests
         run: python -B -m unittest discover -s tests -v
 
   cd:
@@ -67,7 +67,7 @@ jobs:
           echo "### 🚀 Food_Kub Automated CI/CD Report" >> "$GITHUB_STEP_SUMMARY"
           echo "| ขั้นตอน (Stage) | สถานะ (Status) | รายละเอียด (Details) |" >> "$GITHUB_STEP_SUMMARY"
           echo "|---|---|---|" >> "$GITHUB_STEP_SUMMARY"
-          echo "| **1. Continuous Integration (CI)** | ✅ Passed | ติดตั้ง Dependencies, ตรวจ Syntax และผ่าน Unit Tests 25/25 ข้อ |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| **1. Continuous Integration (CI)** | ✅ Passed | ติดตั้ง Dependencies ตรวจ Syntax และผ่านชุดทดสอบอัตโนมัติ |" >> "$GITHUB_STEP_SUMMARY"
           echo "| **2. Continuous Deployment (CD)** | ✅ Ready / Deployed | ตรวจสอบ `render.yaml` & `start_render.sh` พร้อม Deploy ขึ้น Render |" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Branch:** \`${{ github.ref_name }}\`" >> "$GITHUB_STEP_SUMMARY"

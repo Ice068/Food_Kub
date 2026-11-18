@@ -30,12 +30,12 @@ class QrBankPaymentStrategy(PaymentStrategy):
         import uuid
         payload = self._build_promptpay_payload(amount)
         return {
-            "status": "success",
+            "status": "pending",
             "payment_id": f"qr-{uuid.uuid4().hex[:12]}",
             "method": self.get_method_id(),
             "method_name": self.get_display_name(),
             "amount": amount,
-            "message": f"สแกน QR Code เพื่อชำระเงิน {amount:,.2f} บาท สำเร็จ",
+            "message": f"สแกน QR Code เพื่อชำระเงิน {amount:,.2f} บาท และรอพนักงานตรวจสอบ",
             "qr_image": self._generate_qr_base64(payload),
         }
 

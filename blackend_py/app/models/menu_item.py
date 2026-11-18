@@ -13,7 +13,7 @@ class MenuItem:
     @property
     def image_url(self) -> str:
         if not self.image:
-            return "https://placehold.co/300x200?text=No+Image"
+            return "/static/images/menu-placeholder.svg"
         if self.image.startswith(("http://", "https://")):
             return self.image
         if self.image.startswith("/"):

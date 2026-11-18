@@ -14,10 +14,10 @@ class CashPaymentStrategy(PaymentStrategy):
 
     def process(self, amount: float, items: list[dict]) -> dict:
         return {
-            "status": "success",
+            "status": "pending",
             "payment_id": f"cash-{uuid.uuid4().hex[:12]}",
             "method": self.get_method_id(),
             "method_name": self.get_display_name(),
             "amount": amount,
-            "message": f"ชำระเงินสด {amount:,.2f} บาท เรียบร้อยแล้ว",
+            "message": f"รอพนักงานยืนยันรับเงินสด {amount:,.2f} บาท",
         }

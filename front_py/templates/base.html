@@ -1,69 +1,66 @@
+{% from "partials/icons.html" import icon %}
 <!DOCTYPE html>
-<html lang="th">
+<html lang="th" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ title }} | ระบบสั่งอาหาร</title>
+    <meta name="theme-color" content="#edf2ec">
+    <meta name="description" content="Food Kub — เลือกมื้อที่ชอบ สั่งอาหารที่โต๊ะ และแบ่งบิลได้ง่าย ๆ">
+    <title>{{ title | default('มื้อดี ๆ เริ่มต้นที่นี่') }} · Food Kub</title>
+    <script src="/static/theme.js"></script>
+    <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="/static/style.css">
-
-    <style>
-        .navbar {
-            flex-wrap: wrap;
-            gap: 12px;
-        }
-
-        .navbar nav {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-
-        .navbar nav a {
-            margin-left: 0;
-        }
-
-        @media (max-width: 600px) {
-            .navbar {
-                padding: 16px;
-            }
-        }
-    </style>
-
+    <script src="/static/app.js" defer></script>
     {% block extra_head %}{% endblock %}
 </head>
-
-<body>
-    <header class="navbar">
-        <a href="/{{ table_query }}" class="logo">🍽️ Food Kub</a>
-
-        <nav>
-            <a href="/{{ table_query }}">เมนู</a>
-            <a href="/{{ table_query }}#recommended">เมนูแนะนำ</a>
-            <a href="/random{{ table_query }}">วงล้ออาหาร</a>
-
-            <a href="/cart{{ table_query }}" class="cart-link">
-                🛒 ตะกร้า
-                <span id="cart-count" class="cart-badge">
-                    {{ cart_count | default(0) }}
-                </span>
-            </a>
+<body data-table-query="{{ table_query }}" data-demo="{{ 'true' if demo_mode else 'false' }}">
+    {% include "partials/icon_sprite.html" %}
+    <div class="ambient-canvas" aria-hidden="true"><i></i><i></i><i></i></div>
+    <a href="#main-content" class="skip-link">ข้ามไปยังเนื้อหา</a>
+    <header class="app-header glass-panel">
+        <a href="/{{ table_query }}" class="brand" aria-label="Food Kub หน้าเมนู"><span class="brand-mark">{{ icon('utensils') }}</span><span>food<span class="brand-light">kub</span><span class="brand-dot">.</span></span></a>
+        <nav class="primary-nav liquid-tabs" aria-label="เมนูหลัก">
+            <span class="liquid-indicator" aria-hidden="true"></span>
+            <a href="/{{ table_query }}" class="nav-item {{ 'is-active' if request.url.path == '/' or request.url.path.startswith('/category/') else '' }}" {% if request.url.path == '/' or request.url.path.startswith('/category/') %}aria-current="page"{% endif %}>{{ icon('grid') }}<span>เมนูอาหาร</span></a>
+            <a href="/random{{ table_query }}" class="nav-item {{ 'is-active' if request.url.path == '/random' else '' }}" {% if request.url.path == '/random' %}aria-current="page"{% endif %}>{{ icon('shuffle') }}<span>มื้อนี้กินอะไร</span></a>
+            <a href="/{{ table_query }}{{ '&' if table_query else '?' }}favorites=1#menu" class="nav-item" data-favorites-nav>{{ icon('heart') }}<span>จานโปรด</span><small data-favorites-count>0</small></a>
         </nav>
+        <div class="header-actions">
+            <button class="icon-button command-trigger" data-open-dialog="command-dialog" aria-label="ค้นหาเมนูและคำสั่ง (Control K)" data-tooltip="ค้นหา · Ctrl K">{{ icon('search') }}</button>
+            <button class="icon-button" data-open-dialog="settings-dialog" aria-label="ตั้งค่าการแสดงผล" data-tooltip="การแสดงผล">{{ icon('sliders') }}</button>
+            <a href="/cart{{ table_query }}" class="header-cart button" aria-label="เปิดตะกร้าของคุณ">{{ icon('bag') }}<span class="cart-label">ตะกร้า</span><span id="cart-count" class="cart-badge" data-cart-count>{{ cart_count | default(0) }}</span></a>
+        </div>
     </header>
-
-    <main class="container">
-        <output class="table-banner">
-            {% if table_id is not none %}
-            กำลังสั่งอาหาร: <strong>โต๊ะ {{ table_id }}</strong>
-            {% else %}
-            ยังไม่ได้ระบุโต๊ะ กรุณาสแกน QR Code ที่โต๊ะของคุณ
-            {% endif %}
-        </output>
-
+    <main id="main-content" class="container" tabindex="-1">
+        {% if not request.url.path.startswith('/admin') %}
+        <div class="context-bar">
+            <span class="context-location">{{ icon('pin') }} Food Kub Kitchen <span class="context-divider">/</span> <span class="muted">อร่อยง่าย ๆ ในทุกวัน</span></span>
+            <span class="table-indicator"><i class="status-dot" aria-hidden="true"></i>{% if table_id is not none %}โต๊ะ {{ '%02d' | format(table_id) }}{% else %}เลือกเมนู แล้วสแกน QR ที่โต๊ะ{% endif %}</span>
+        </div>
+        {% endif %}
+        {% if demo_mode %}<div class="demo-banner">{{ icon('sparkles') }}<span>โหมดทดลอง · ข้อมูลบันทึกในเครื่อง ไม่มีการเรียกเก็บเงินจริง</span>{% if table_id is none and not request.url.path.startswith('/admin') %}<a href="/?table=1" class="text-button">ทดลองที่โต๊ะ 01 {{ icon('arrow-up-right') }}</a>{% endif %}</div>{% endif %}
         {% block content %}{% endblock %}
     </main>
-
-    <footer class="footer">
-        <p>&copy; 2026 ระบบสั่งอาหาร — ตัวอย่างโปรเจกต์ FastAPI (OOP)</p>
-    </footer>
+    <footer class="footer"><a class="footer-brand" href="/{{ table_query }}">foodkub.</a><span>อาหารดี ๆ ช่วงเวลาดี ๆ</span><a href="/admin/dashboard">สำหรับทีมร้าน {{ icon('arrow-up-right') }}</a></footer>
+    <div class="toast-region" aria-live="polite" aria-relevant="additions" id="toast-region"></div>
+    <dialog id="command-dialog" class="glass-dialog command-dialog" aria-labelledby="command-title" data-dialog>
+        <div class="dialog-heading"><h2 id="command-title">หาอะไรอร่อย ๆ</h2><button class="icon-button" data-close-dialog aria-label="ปิดการค้นหา">{{ icon('x') }}</button></div>
+        <label class="search-field command-search">{{ icon('search') }}<input id="command-search" type="search" placeholder="ค้นหาอาหาร หรือไปยังหน้าต่าง ๆ" autocomplete="off" aria-label="ค้นหาเมนูและหน้า" autofocus><kbd>ESC</kbd></label>
+        <div id="command-results" class="command-results" aria-live="polite"></div>
+        <p class="dialog-footnote">ใช้ Tab เพื่อเลือก · Enter เพื่อเปิด · Esc เพื่อปิด</p>
+    </dialog>
+    <dialog id="settings-dialog" class="glass-dialog" aria-labelledby="settings-title" data-dialog>
+        <div class="dialog-heading"><div><p class="eyebrow">MAKE IT YOURS</p><h2 id="settings-title">ในแบบที่คุณชอบ</h2></div><button class="icon-button" data-close-dialog aria-label="ปิดการตั้งค่า">{{ icon('x') }}</button></div>
+        <p class="muted">บันทึกการตั้งค่าบนอุปกรณ์นี้โดยอัตโนมัติ</p>
+        <fieldset class="settings-field"><legend>รูปแบบหน้าจอ</legend><div class="theme-options liquid-tabs"><span class="liquid-indicator" aria-hidden="true"></span><button type="button" data-theme-choice="light">{{ icon('sun') }} สว่าง</button><button type="button" data-theme-choice="dark">{{ icon('moon') }} มืด</button><button type="button" data-theme-choice="system">{{ icon('monitor') }} ระบบ</button></div></fieldset>
+        <label class="setting-toggle"><span><strong>ลดการเคลื่อนไหว</strong><small class="muted">ใช้การเปลี่ยนหน้าจอแบบเรียบง่าย</small></span><input type="checkbox" id="reduce-motion" role="switch"></label>
+        <button type="button" class="button button-secondary full-width" id="clear-favorites">{{ icon('heart') }} ล้างรายการจานโปรด</button>
+    </dialog>
+    <dialog id="dish-dialog" class="glass-dialog dish-dialog" aria-labelledby="dish-title" data-dialog>
+        <button class="icon-button dish-close" data-close-dialog aria-label="ปิดรายละเอียด">{{ icon('x') }}</button>
+        <img id="dish-image" alt="" width="600" height="400">
+        <div class="dish-detail"><span id="dish-category" class="badge"></span><h2 id="dish-title"></h2><p class="muted">ปรุงสดใหม่เมื่อสั่ง หากแพ้อาหารหรือต้องการปรับรสชาติ กรุณาแจ้งพนักงานก่อนสั่ง</p><div class="dish-footer"><strong id="dish-price" class="price"></strong><form id="dish-add-form" method="post" data-cart-add><button class="button button-primary" type="submit">{{ icon('plus') }} เพิ่มลงตะกร้า</button></form></div></div>
+    </dialog>
+    {% block extra_scripts %}{% endblock %}
 </body>
 </html>

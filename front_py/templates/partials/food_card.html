@@ -1,32 +1,7 @@
-{% macro food_card(item) %}
-<article class="menu-card">
-    <div class="menu-card-image">
-        {% if item.image_url %}
-        <img
-            src="{{ item.image_url }}"
-            alt="{{ item.name }}"
-            loading="lazy"
-        >
-        {% else %}
-        <div class="food-placeholder">
-            <span aria-hidden="true">🍽️</span>
-        </div>
-        {% endif %}
-    </div>
-
-    <div class="menu-card-body">
-        <h3>{{ item.name }}</h3>
-        <p class="food-category">{{ item.category }}</p>
-
-        <p class="menu-price">
-            {{ '%.2f'|format(item.price) }} บาท
-        </p>
-
-        <form action="/cart/add/{{ item.id }}{{ table_query }}" method="post">
-            <button type="submit" class="btn-add">
-                เพิ่มลงตะกร้า
-            </button>
-        </form>
-    </div>
+{% from "partials/icons.html" import icon %}
+{% macro food_card(item, index=0, selected_category='') %}
+<article class="menu-card glass-panel" data-food-id="{{ item.id }}" data-name="{{ item.name }}" data-category="{{ item.category }}" data-price="{{ item.price }}" data-image="{{ item.image_url or '/static/images/menu-placeholder.svg' }}" data-available="{{ 'false' if item.available is defined and not item.available else 'true' }}" data-index="{{ index }}" style="--card-index: {{ index % 9 }}" {% if selected_category and item.category != selected_category %}hidden{% endif %}>
+    <div class="menu-card-image"><button type="button" class="dish-image-button" data-dish-detail aria-label="ดูรายละเอียด {{ item.name }}"><img src="{{ item.image_url or '/static/images/menu-placeholder.svg' }}" alt="{{ item.name }}" loading="lazy" width="400" height="300"></button>{% if item.id in [1,3,7] %}<span class="recommended-badge">{{ icon('sparkles') }} ครัวแนะนำ</span>{% endif %}<button type="button" class="favorite-button icon-button" data-favorite="{{ item.id }}" aria-label="บันทึก {{ item.name }} เป็นจานโปรด" aria-pressed="false">{{ icon('heart') }}</button></div>
+    <div class="menu-card-body"><p class="food-category">{{ item.category }}</p><h3><button type="button" data-dish-detail>{{ item.name }}</button></h3><div class="card-bottom"><p class="menu-price"><span>฿</span>{{ '%.0f'|format(item.price) if item.price == item.price|int else '%.2f'|format(item.price) }}</p><form action="/cart/add/{{ item.id }}{{ table_query }}" method="post" data-cart-add data-item-name="{{ item.name }}"><button type="submit" class="card-add" aria-label="เพิ่ม {{ item.name }} ลงตะกร้า" data-tooltip="เพิ่มลงตะกร้า" {% if item.available is defined and not item.available %}disabled{% endif %}>{% if item.available is defined and not item.available %}หมด{% else %}{{ icon('plus') }}{% endif %}</button></form></div></div>
 </article>
 {% endmacro %}

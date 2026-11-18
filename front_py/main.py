@@ -1,4 +1,9 @@
-from fastapi import FastAPI
+import logging
+import httpx
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -24,7 +29,10 @@ class Application:
 
         self.app.add_middleware(
             SessionMiddleware,
-            secret_key="food-kub-secret-key",
+            secret_key=settings.SESSION_SECRET,
+            https_only=settings.COOKIE_SECURE,
+            same_site="lax",
+            max_age=60 * 60 * 24 * 30,
         )
 
         self.menu_service = MenuService()
@@ -37,6 +45,42 @@ class Application:
 
         self._mount_static()
         self._include_routers()
+        self._register_error_handlers()
+
+    def _register_error_handlers(self):
+        def error_response(request: Request, status: int, message: str):
+            if "application/json" in request.headers.get("accept", ""):
+                return JSONResponse({"ok": False, "detail": message, "error": message}, status_code=status)
+            response = self.template_service.render(request, "error.html", {
+                "title": "ให้เราลองอีกครั้ง · Food Kub", "message": message,
+                "status_code": status, "error": message,
+            })
+            response.status_code = status
+            return response
+
+        @self.app.exception_handler(HTTPException)
+        async def http_error(request, exc):
+            return error_response(request, exc.status_code, str(exc.detail))
+
+        @self.app.exception_handler(RequestValidationError)
+        async def invalid_request(request, exc):
+            return error_response(request, 422, "ข้อมูลไม่ถูกต้อง กรุณาตรวจสอบช่องที่กรอกและลองอีกครั้ง")
+
+        @self.app.exception_handler(httpx.HTTPError)
+        async def backend_error(request, exc):
+            status = exc.response.status_code if isinstance(exc, httpx.HTTPStatusError) else 503
+            message = "ติดต่อครัวไม่สำเร็จ กรุณาลองอีกครั้ง ข้อมูลในตะกร้ายังอยู่"
+            if isinstance(exc, httpx.HTTPStatusError) and status in (400, 404, 409, 422):
+                try:
+                    message = str(exc.response.json().get("detail", message))
+                except ValueError:
+                    pass
+            return error_response(request, status, message)
+
+        @self.app.exception_handler(Exception)
+        async def unexpected_error(request, exc):
+            logging.getLogger(__name__).exception("Unexpected request failure", exc_info=exc)
+            return error_response(request, 500, "เกิดข้อผิดพลาดชั่วคราว กรุณากลับไปที่เมนูแล้วลองอีกครั้ง")
 
     def _mount_static(self):
         self.app.mount(

@@ -1,4 +1,5 @@
 import httpx
+from app.core.backend import backend_client
 
 from fastapi import HTTPException, Query, Request
 
@@ -25,7 +26,7 @@ async def set_table_context(
 
     # อ่านบิลล่าสุดจาก Backend
     try:
-        async with httpx.AsyncClient(
+        async with backend_client(
             timeout=5.0
         ) as client:
             response = await client.get(
@@ -35,6 +36,10 @@ async def set_table_context(
 
             response.raise_for_status()
             live = response.json()["table"]
+
+            count_response = await client.get(f"{settings.BACKEND_URL}/api/table-settings")
+            count_response.raise_for_status()
+            table_count = int(count_response.json()["table_count"])
 
     except (
         httpx.HTTPError,
@@ -49,6 +54,9 @@ async def set_table_context(
             ),
         ) from exc
 
+    if table > table_count and not live:
+        raise HTTPException(404, "ไม่พบโต๊ะนี้ในร้าน กรุณาสแกน QR ประจำโต๊ะอีกครั้ง")
+
     request.state.live_table = live
 
     # แยกข้อมูลลูกค้าตามรอบบิล
@@ -62,10 +70,18 @@ async def set_table_context(
     ):
         request.session[f"cart_table_{table}"] = {}
 
-    if generation:
+    if generation and request.session.get(f"cart_table_{table}"):
         request.session[generation_key] = generation
     else:
         request.session.pop(generation_key, None)
+
+    # Backend owns submitted orders. Do not duplicate large live bills in the
+    # signed browser cookie; only each customer's unsubmitted cart belongs there.
+    for key in list(request.session):
+        if key.startswith(("order_table_", "orders_table_", "shared_paid_table_", "shared_items_table_")):
+            request.session.pop(key, None)
+        elif key.startswith("bill_generation_") and not request.session.get("cart_table_" + key.removeprefix("bill_generation_")):
+            request.session.pop(key, None)
 
     # ใช้รายการในบิลที่ Backend เก็บไว้
     live_dict = live or {}
@@ -75,19 +91,23 @@ async def set_table_context(
     existing_state = CartService.TABLE_STATE.get(str(table), {})
     preserved_shared_ids = (
         backend_shared_ids
-        or set(existing_state.get("shared_item_ids", []))
-        or set(request.session.get(f"{CartService.SHARED_ITEMS_KEY}_table_{table}", []))
+        or (
+            set(existing_state.get("shared_item_ids", []))
+            or set(request.session.get(f"{CartService.SHARED_ITEMS_KEY}_table_{table}", []))
+            if live and previous == generation and not live.get("paid")
+            else set()
+        )
     )
 
     CartService.TABLE_STATE[str(table)] = {
         "orders": {
             str(item["id"]): item["qty"]
-            for item in live_dict.get("items", [])
+            for item in (live_dict.get("items", []) if not live_dict.get("paid") else [])
         },
         "shared_paid": float(
-            live_dict.get("shared_paid", 0)
+            live_dict.get("shared_paid", 0) if not live_dict.get("paid") else 0
         ),
-        "shared_item_ids": preserved_shared_ids,
+        "shared_item_ids": preserved_shared_ids if not live_dict.get("paid") else set(),
     }
 
     # ป้องกันแก้ตะกร้าระหว่างเก็บเงินหรือหลังจ่ายครบ

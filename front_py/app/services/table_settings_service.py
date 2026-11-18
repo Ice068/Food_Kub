@@ -1,6 +1,8 @@
 import httpx
+from app.core.backend import backend_client
 
 from app.core.config import settings
+from app.core.admin_auth import admin_api_key
 
 
 class TableSettingsService:
@@ -14,7 +16,7 @@ class TableSettingsService:
 
     async def get_count(self) -> int:
         """อ่านจำนวนโต๊ะที่บันทึกไว้"""
-        async with httpx.AsyncClient(timeout=10.0) as client:
+        async with backend_client(timeout=10.0) as client:
             response = await client.get(self.url)
             response.raise_for_status()
 
@@ -22,9 +24,10 @@ class TableSettingsService:
 
     async def set_count(self, count: int) -> None:
         """บันทึกจำนวนโต๊ะ และส่ง HTTP error ให้ Router จัดการ"""
-        async with httpx.AsyncClient(timeout=10.0) as client:
+        async with backend_client(timeout=10.0) as client:
             response = await client.put(
                 self.url,
+                headers={"X-Food-Kub-Key": admin_api_key()},
                 json={
                     "table_count": count,
                 },

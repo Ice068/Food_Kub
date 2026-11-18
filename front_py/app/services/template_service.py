@@ -3,6 +3,7 @@ from fastapi.templating import Jinja2Templates
 from urllib.parse import quote, urlsplit
 
 from app.core.table_context import table_query
+from app.core.config import settings
 
 
 def menu_image_url(image: str | None) -> str:
@@ -43,4 +44,5 @@ class TemplateService:
             **(context or {}),
             "table_id": getattr(request.state, "table_id", None),
             "table_query": table_query(request),
+            "demo_mode": getattr(settings, "DEMO_MODE", False),
         })

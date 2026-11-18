@@ -1,3 +1,5 @@
+import json
+from fastapi import HTTPException
 from starlette.requests import Request
 
 
@@ -8,6 +10,7 @@ class CartService:
     ORDER_KEY = "orders"
     SHARED_PAID_KEY = "shared_paid"
     SHARED_ITEMS_KEY = "shared_items"
+    MAX_SESSION_BYTES = 2400
 
     # In-memory table store shared across devices at the same table
     TABLE_STATE: dict[str, dict] = {}
@@ -61,7 +64,8 @@ class CartService:
         if tid is not None:
             state = self._get_table_state(tid, request)
             state["orders"] = orders
-        request.session[self._order_key(request)] = orders
+        if tid is None:
+            request.session[self._order_key(request)] = orders
         self.clear(request)
         return orders
 
@@ -77,19 +81,36 @@ class CartService:
         return sum(self.get_bill_items(request).values())
 
     def add_item(self, request: Request, item_id: int):
-        cart = self.get_cart(request)
+        cart = dict(self.get_cart(request))
         key = str(item_id)
         cart[key] = cart.get(key, 0) + 1
-        request.session[self._session_key(request)] = cart
+        self._store_cart(request, cart)
 
     def update_quantity(self, request: Request, item_id: int, quantity: int):
-        cart = self.get_cart(request)
+        cart = dict(self.get_cart(request))
         key = str(item_id)
         if quantity <= 0:
             cart.pop(key, None)
         else:
             cart[key] = quantity
-        request.session[self._session_key(request)] = cart
+        self._store_cart(request, cart)
+
+    def _store_cart(self, request: Request, cart: dict):
+        """Keep the signed cookie below browser limits without dropping a cart."""
+        key = self._session_key(request)
+        projected = {**request.session, key: cart}
+        tid = self._get_table_id(request)
+        live = getattr(request.state, "live_table", None) or {}
+        if tid is not None and cart and live.get("opened_at"):
+            projected[f"bill_generation_{tid}"] = live["opened_at"]
+        if len(json.dumps(projected).encode("utf-8")) > self.MAX_SESSION_BYTES:
+            raise HTTPException(422, "ตะกร้ามีหลายรายการแล้ว กรุณาส่งรายการเข้าครัวหรือล้างตะกร้าที่ไม่ใช้ก่อนเพิ่ม")
+        if cart:
+            request.session[key] = cart
+            if tid is not None and live.get("opened_at"):
+                request.session[f"bill_generation_{tid}"] = live["opened_at"]
+        else:
+            request.session.pop(key, None)
 
     def remove_item(self, request: Request, item_id: int):
         cart = self.get_cart(request)
@@ -123,7 +144,8 @@ class CartService:
         if tid is not None:
             state = self._get_table_state(tid, request)
             state["orders"] = orders
-        request.session[self._order_key(request)] = orders
+        if tid is None:
+            request.session[self._order_key(request)] = orders
         request.session[self._session_key(request)] = cart
 
     def record_shared_payment(self, request: Request, amount: float, shared_item_ids: list[int] | None = None):
@@ -138,8 +160,6 @@ class CartService:
             state["shared_paid"] = round(state["shared_paid"] + clean_amt, 2)
             if shared_item_ids:
                 state["shared_item_ids"].update(int(i) for i in shared_item_ids)
-            request.session[f"{self.SHARED_PAID_KEY}_table_{tid}"] = state["shared_paid"]
-            request.session[f"{self.SHARED_ITEMS_KEY}_table_{tid}"] = list(state["shared_item_ids"])
         else:
             curr = float(request.session.get(self.SHARED_PAID_KEY, 0.0))
             request.session[self.SHARED_PAID_KEY] = round(curr + clean_amt, 2)
@@ -201,15 +221,13 @@ class CartService:
                 state = self._get_table_state(tid, request)
                 state["shared_paid"] = round(remaining_paid, 2)
                 state["shared_item_ids"] = shared_ids
-                request.session[f"{self.SHARED_PAID_KEY}_table_{tid}"] = state["shared_paid"]
-                request.session[f"{self.SHARED_ITEMS_KEY}_table_{tid}"] = list(shared_ids)
             else:
                 request.session[self.SHARED_PAID_KEY] = round(remaining_paid, 2)
                 request.session[self.SHARED_ITEMS_KEY] = list(shared_ids)
 
     def clear(self, request: Request):
         """ล้างเฉพาะตะกร้าที่กำลังเลือกสั่ง"""
-        request.session[self._session_key(request)] = {}
+        request.session.pop(self._session_key(request), None)
 
     def clear_all(self, request: Request):
         """ล้างทั้งตะกร้าและบิลโต๊ะเมื่อชำระเงินเสร็จสิ้นครบถ้วน"""
@@ -225,8 +243,8 @@ class CartService:
             request.session.pop(f"{self.SHARED_ITEMS_KEY}_table_{tid}", None)
             request.session.pop(self._order_key(request), None)
 
-        request.session[self._session_key(request)] = {}
-        request.session[self._order_key(request)] = {}
+        request.session.pop(self._session_key(request), None)
+        request.session.pop(self._order_key(request), None)
         request.session.pop(self.SHARED_PAID_KEY, None)
         request.session.pop(self.SHARED_ITEMS_KEY, None)
 

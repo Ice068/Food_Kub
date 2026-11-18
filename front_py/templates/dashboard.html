@@ -1,76 +1,9 @@
-<!DOCTYPE html>
-<html lang="th">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>{{ title }} | Food Kub</title>
-
-    <link rel="stylesheet" href="/static/style.css">
-    <link rel="stylesheet" href="/static/dashboard.css">
-
-    <script
-        src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"
-        integrity="sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4"
-        crossorigin="anonymous"
-    ></script>
-</head>
-<body>
-
-<nav class="dash-nav" aria-label="เมนูลัด">
-    <a class="brand" href="/admin/dashboard">
-        🍽️ Food Kub Admin
-    </a>
-
-    <a
-        class="nav-link is-current"
-        href="/admin/dashboard"
-        aria-current="page"
-    >
-        📊 แดชบอร์ด
-    </a>
-
-    <a class="nav-link" href="/admin/">
-        🛠️ จัดการเมนู
-    </a>
-
-    <a class="nav-link" href="/admin/tables">
-        🔳 QR Code โต๊ะ
-    </a>
-
-    <a
-        class="nav-link"
-        href="/"
-        target="_blank"
-        rel="noopener"
-    >
-        🛎️ หน้าลูกค้า
-    </a>
-
-    <span class="spacer"></span>
-
-    <a class="nav-link" href="/admin/logout">
-        ออกจากระบบ 🚪
-    </a>
-</nav>
-
-<main class="dash">
-    <div class="dash-head">
-        <h1>
-            ภาพรวมร้านวันนี้
-
-            <span
-                id="today-label"
-                style="font-weight:400;font-size:1rem;color:#5c5f66"
-            ></span>
-        </h1>
-
-        <output id="live-status" class="live-status">
-            <span class="live-dot" aria-hidden="true"></span>
-            <span id="live-text">กำลังโหลด...</span>
-        </output>
-    </div>
-
+{% extends "base.html" %}
+{% block extra_head %}<link rel="stylesheet" href="/static/operations.css"><link rel="stylesheet" href="/static/dashboard.css">{% endblock %}
+{% block content %}
+<nav class="ops-nav" aria-label="จัดการร้าน"><a href="/admin/dashboard" aria-current="page">ภาพรวมร้าน</a><a href="/admin/">จัดการเมนู</a><a href="/admin/tables">QR ประจำโต๊ะ</a><a class="ops-signout" href="/admin/logout">ออกจากระบบ ↗</a></nav>
+<section class="dash">
+    <header class="page-heading ops-heading dash-head"><div><p class="eyebrow">THE RESTAURANT / AT A GLANCE</p><h1>ภาพรวมร้านวันนี้</h1><p id="today-label" class="muted">{{ today_label }}</p></div><div class="dash-live-controls"><output id="live-status" class="live-status"><span class="live-dot" aria-hidden="true"></span><span id="live-text">กำลังเชื่อมต่อข้อมูล</span></output><button id="refresh-dashboard" type="button" class="button button-secondary">อัปเดตข้อมูล ↻</button></div></header>
     <div
         id="dash-error"
         class="dash-error"
@@ -80,27 +13,27 @@
 
     <!-- สถิติภาพรวม -->
     <section class="metric-grid" aria-label="สถิติภาพรวมรายวัน">
-        <article class="metric-card">
-            <div class="label">💰 ยอดขายรวมวันนี้</div>
-            <div class="value" id="m-revenue">–</div>
+        <article class="metric-card glass-panel">
+            <div class="label">ยอดขายรวมวันนี้</div>
+            <div class="value" id="m-revenue">฿{{ '{:,.2f}'.format(revenue.today) }}</div>
 
             <div class="sub" id="m-revenue-sub">
                 เทียบกับเมื่อวาน
             </div>
         </article>
 
-        <article class="metric-card">
-            <div class="label">🧾 จำนวนบิลที่ปิดแล้ว</div>
-            <div class="value" id="m-bills">–</div>
+        <article class="metric-card glass-panel">
+            <div class="label">จำนวนบิลที่ปิดแล้ว</div>
+            <div class="value" id="m-bills">{{ bills.today }} <small>บิล</small></div>
 
             <div class="sub" id="m-bills-sub">
                 เทียบกับเมื่อวาน
             </div>
         </article>
 
-        <article class="metric-card">
-            <div class="label">🪑 โต๊ะที่กำลังเปิดใช้งาน</div>
-            <div class="value" id="m-tables">–</div>
+        <article class="metric-card glass-panel">
+            <div class="label">โต๊ะที่กำลังเปิดใช้งาน</div>
+            <div class="value" id="m-tables">{{ tables.active }} / {{ tables.total }} <small>โต๊ะ</small></div>
 
             <div class="progress" aria-hidden="true">
                 <span id="m-tables-bar" style="width:0"></span>
@@ -115,9 +48,9 @@
             </div>
         </article>
 
-        <article class="metric-card">
-            <div class="label">🔥 เมนูขายดีประจำวัน</div>
-            <div class="value" id="m-top">–</div>
+        <article class="metric-card glass-panel">
+            <div class="label">เมนูขายดีประจำวัน</div>
+            <div class="value" id="m-top">{% if top_dish %}{{ top_dish.name }}{% else %}<small>ยังไม่มีออเดอร์วันนี้</small>{% endif %}</div>
 
             <div class="sub" id="m-top-sub">
                 นับจากจานที่ลูกค้าสั่งวันนี้
@@ -127,19 +60,19 @@
 
     <!-- โต๊ะและประวัติชำระเงิน -->
     <div class="dash-grid">
-        <section class="panel" aria-labelledby="h-live">
+        <section class="panel glass-panel" aria-labelledby="h-live">
             <h2 id="h-live">
                 มอนิเตอร์โต๊ะ &amp; ออเดอร์สด
             </h2>
 
             <p class="panel-sub">
-                🟢 ว่าง · 🟡 กำลังรับประทาน · 🔴 รอชำระ
+                <span class="table-legend"><i class="legend-free"></i>ว่าง <i class="legend-dining"></i>กำลังรับประทาน <i class="legend-waiting"></i>รอชำระ</span>
             </p>
 
-            <div id="table-grid" class="table-grid"></div>
+            <div id="table-grid" class="table-grid" aria-busy="true">{% for n in range(6) %}<div class="dash-skeleton" aria-hidden="true"></div>{% endfor %}</div>
         </section>
 
-        <section class="panel" aria-labelledby="h-tx">
+        <section class="panel glass-panel" aria-labelledby="h-tx">
             <h2 id="h-tx">ประวัติการชำระเงินล่าสุด</h2>
 
             <p class="panel-sub">
@@ -169,7 +102,7 @@
 
     <!-- กราฟยอดขาย -->
     <div class="dash-grid">
-        <section class="panel" aria-labelledby="h-trend">
+        <section class="panel glass-panel" aria-labelledby="h-trend">
             <h2 id="h-trend">ยอดขาย 7 วันล่าสุด</h2>
 
             <p class="panel-sub">
@@ -177,10 +110,7 @@
             </p>
 
             <div class="chart-box" aria-hidden="true">
-                <canvas
-                    id="chart-trend"
-                    tabindex="-1"
-                ></canvas>
+                <div id="chart-trend" class="native-chart"></div>
             </div>
 
             <div class="chart-data">
@@ -199,7 +129,7 @@
             </div>
         </section>
 
-        <section class="panel" aria-labelledby="h-hour">
+        <section class="panel glass-panel" aria-labelledby="h-hour">
             <h2 id="h-hour">ยอดขายรายชั่วโมงวันนี้</h2>
 
             <p class="panel-sub">
@@ -207,10 +137,7 @@
             </p>
 
             <div class="chart-box" aria-hidden="true">
-                <canvas
-                    id="chart-hour"
-                    tabindex="-1"
-                ></canvas>
+                <div id="chart-hour" class="native-chart"></div>
             </div>
 
             <div class="chart-data">
@@ -231,7 +158,7 @@
     </div>
 
     <!-- เมนูยอดนิยมและเปิดปิดขาย -->
-    <section class="panel" aria-labelledby="h-stock">
+    <section class="panel glass-panel" aria-labelledby="h-stock">
         <h2 id="h-stock">
             เมนูยอดนิยม &amp; เปิด-ปิดของหมด
         </h2>
@@ -253,12 +180,12 @@
             <ul id="all-list" class="stock-list"></ul>
         </details>
     </section>
-</main>
+</section>
 
 <!-- รายละเอียดโต๊ะ -->
 <dialog
     id="table-dialog"
-    class="table-dialog"
+    class="table-dialog glass-panel" data-dialog
     aria-labelledby="table-dialog-title"
 >
     <div class="table-dialog-head">
@@ -267,7 +194,7 @@
         <form method="dialog">
             <button
                 type="submit"
-                class="table-dialog-close"
+                class="table-dialog-close button button-secondary"
                 autofocus
             >
                 ปิด
@@ -308,14 +235,29 @@
     </div>
 
     <p class="table-dialog-total">
-        ยอดรวมรายการ
+        ยอดคงเหลือ
         <strong id="table-dialog-total">–</strong>
     </p>
 </dialog>
 
+<dialog id="ops-confirm" class="ops-dialog ops-dialog-small glass-panel" aria-labelledby="ops-confirm-title"><p class="eyebrow">PLEASE CONFIRM</p><h2 id="ops-confirm-title">ตรวจสอบก่อนบันทึก</h2><p id="ops-confirm-message" class="muted"></p><form method="dialog" class="ops-dialog-actions"><button class="button button-secondary" value="cancel" autofocus>ยกเลิก</button><button class="button button-primary" value="confirm">ยืนยัน</button></form></dialog>
 <script>
 (() => {
     const REFRESH_MS = 10000;
+    const notify = message => {
+        if (window.FoodKub?.toast) window.FoodKub.toast(message, 'error');
+        else { document.getElementById('dash-error').hidden = false; document.getElementById('dash-error').textContent = message; }
+    };
+    function confirmAction(message) {
+        const dialog = document.getElementById('ops-confirm');
+        if (dialog.open) return Promise.resolve(false);
+        document.getElementById('ops-confirm-message').textContent = message;
+        dialog.returnValue = '';
+        return new Promise(resolve => {
+            dialog.addEventListener('close', () => resolve(dialog.returnValue === 'confirm'), { once: true });
+            dialog.showModal();
+        });
+    }
     const $ = (id) => document.getElementById(id);
 
     const esc = (value) => String(value).replace(
@@ -456,6 +398,11 @@
 
     // ---------- สถานะโต๊ะ ----------
 
+    // The API total is already net of shared credits; never subtract them twice.
+    function remainingTotal(table) {
+        return !table || table.paid ? 0 : Math.max(0, Number(table.total) || 0);
+    }
+
     function tableStateLabel(table) {
         if (table.paid) {
             return "ชำระแล้ว · รอเคลียร์";
@@ -490,7 +437,7 @@
 
         if (table.status !== "waiting_payment") {
             const partialNote = isPartial
-                ? `<small style="display:block;margin-top:6px;color:#2b8a3e;font-size:0.75rem;line-height:1.3;">(จ่ายแล้ว ${money(paidText)} • ลูกค้ากำลังแยกชำระ)</small>`
+                ? `<small class="payment-note">(จ่ายแล้ว ${money(paidText)} • ลูกค้ากำลังแยกชำระ)</small>`
                 : "";
 
             return `
@@ -639,9 +586,9 @@
                     table.status === "waiting_payment"
                 );
 
-                const stateClass = waiting
-                    ? "is-waiting"
-                    : "is-dining";
+                const stateClass = table.paid
+                    ? "is-paid"
+                    : waiting ? "is-waiting" : "is-dining";
 
                 const stateLabel = tableStateLabel(table);
 
@@ -679,8 +626,9 @@
                         </div>
 
                         <div class="t-total">
-                            ${money(table.total)}
-                            ${((table.paid_amount || 0) > 0 || (table.shared_paid || 0) > 0) ? `<br><small style="font-size:0.75rem; color:#2b8a3e; font-weight:bold;">(จ่ายแล้ว ${money(table.paid_amount || table.shared_paid)} • เหลือ ${money(table.total)})</small>` : ''}
+                            <span class="t-total-label">ยอดคงเหลือ</span>
+                            ${money(remainingTotal(table))}
+                            ${((table.paid_amount || 0) > 0 || (table.shared_paid || 0) > 0) ? `<small class="payment-note">รับชำระแล้ว ${money(table.paid_amount || table.shared_paid)}${table.paid ? ' · ครบแล้ว' : ''}</small>` : ''}
                         </div>
 
                         <ul>${shown}${more}</ul>
@@ -824,7 +772,7 @@
         setHTML("table-dialog-items", rowsHTML);
 
         $("table-dialog-total").textContent = money(
-            table ? table.total : 0
+            remainingTotal(table)
         );
     }
 
@@ -845,7 +793,7 @@
               `(หมายเหตุ: หากลูกค้าท่านอื่นในโต๊ะยังแยกจ่ายไม่ครบ อย่าเพิ่งกดยืนยันปุ่มนี้)`
             : `ตรวจสอบว่าได้รับ${methodLabel}ครบ ${money(table.total)} สำหรับโต๊ะ ${number} แล้วใช่ไหม? ยืนยันแล้วจะบันทึกยอดขายและปิดบิล`;
 
-        return confirm(msg);
+        return confirmAction(msg);
     }
 
     $("table-grid").addEventListener(
@@ -878,13 +826,13 @@
                 action === "confirm-payment" &&
                 !method
             ) {
-                alert("กรุณาเลือกวิธีรับเงิน");
+                notify("กรุณาเลือกวิธีรับเงิน");
                 return;
             }
 
             if (
                 action === "confirm-payment" &&
-                !confirmFullTablePayment(number, table, method)
+                !(await confirmFullTablePayment(number, table, method))
             ) {
                 return;
             }
@@ -924,7 +872,7 @@
                     );
                 }
             } catch (error) {
-                alert(
+                notify(
                     error.message ||
                     "ยังตรวจสอบผลไม่ได้ " +
                     "กรุณาโหลดข้อมูลก่อนลองใหม่"
@@ -960,7 +908,7 @@
                 return;
             }
 
-            const confirmed = confirm(
+            const confirmed = await confirmAction(
                 `ลูกค้าโต๊ะ ${number} ชำระครบและลุกออกแล้ว ` +
                 "ยืนยันเคลียร์โต๊ะ?"
             );
@@ -1002,7 +950,7 @@
                     );
                 }
             } catch (error) {
-                alert(
+                notify(
                     error.message ||
                     "เคลียร์โต๊ะไม่สำเร็จ"
                 );
@@ -1201,7 +1149,7 @@
                 ).toLocaleTimeString("th-TH", {
                     hour: "2-digit",
                     minute: "2-digit",
-                    second: "2-digit"
+                    second: "2-digit", timeZone: "Asia/Bangkok"
                 });
 
                 const badge = transaction.bill_closed
@@ -1219,7 +1167,7 @@
                         <td>${time}</td>
 
                         <td>
-                            ${transaction.table ?? "–"}
+                            ${esc(transaction.table ?? "–")}
                         </td>
 
                         <td>
@@ -1250,181 +1198,27 @@
 
     // ---------- กราฟ ----------
 
-    const charts = {};
-
-    function upsertChart(key, canvasId, config) {
-        if (typeof Chart === "undefined") return;
-
-        if (charts[key]) {
-            charts[key].data = config.data;
-            charts[key].update("none");
-        } else {
-            charts[key] = new Chart(
-                $(canvasId),
-                config
-            );
-        }
+    function drawBars(id, entries, label) {
+        const maximum = Math.max(1, ...entries.map(row => Number(row.total) || 0));
+        const bars = entries.map((row, index) => {
+            const value = Math.max(0, Number(row.total) || 0);
+            const height = value ? Math.max(2, value / maximum * 100) : 0;
+            return `<div class="chart-column"><div class="chart-column-track"><span class="chart-bar ${index === entries.length - 1 ? 'is-latest' : ''}" style="height:${height}%"><span class="chart-tooltip">${esc(label(row))} · ${money(value)}</span></span></div><span class="chart-tick">${esc(label(row))}</span></div>`;
+        }).join('');
+        setHTML(id, `<div class="chart-axis"><span>${money(maximum === 1 ? 0 : maximum)}</span><span>฿0</span></div><div class="chart-columns">${bars}</div>`);
     }
-
     function renderCharts(data) {
-        const days = data.sales_trend;
-
-        setHTML(
-            "chart-trend-data",
-            days.map((day) => `
-                <tr>
-                    <th scope="row">${esc(day.date)}</th>
-                    <td>${money(day.total)}</td>
-                </tr>
-            `).join("")
-        );
-
-        setHTML(
-            "chart-hour-data",
-            data.sales_by_hour.map((hour) => `
-                <tr>
-                    <th scope="row">
-                        ${String(hour.hour).padStart(2, "0")}:00
-                    </th>
-
-                    <td>${money(hour.total)}</td>
-                </tr>
-            `).join("")
-        );
-
-        upsertChart("trend", "chart-trend", {
-            type: "bar",
-
-            data: {
-                labels: days.map((day) => (
-                    new Date(day.date + "T00:00:00")
-                        .toLocaleDateString("th-TH", {
-                            weekday: "short",
-                            day: "numeric",
-                            month: "short"
-                        })
-                )),
-
-                datasets: [{
-                    label: "ยอดขาย (บาท)",
-                    data: days.map((day) => day.total),
-
-                    backgroundColor: days.map(
-                        (_, index) => (
-                            index === days.length - 1
-                                ? "#d9480f"
-                                : "#ffc078"
-                        )
-                    ),
-
-                    borderRadius: 6
-                }]
-            },
-
-            options: {
-                maintainAspectRatio: false,
-
-                plugins: {
-                    legend: {
-                        display: false
-                    },
-
-                    tooltip: {
-                        callbacks: {
-                            label: (context) => (
-                                " " + money(context.parsed.y)
-                            )
-                        }
-                    }
-                },
-
-                scales: {
-                    y: {
-                        beginAtZero: true,
-
-                        ticks: {
-                            callback: (value) => "฿" + value
-                        }
-                    }
-                }
-            }
-        });
-
-        const hours = data.sales_by_hour;
-
-        const withSales = hours
-            .filter((hour) => hour.total > 0)
-            .map((hour) => hour.hour);
-
-        const from = Math.min(8, ...withSales);
-        const to = Math.max(21, ...withSales);
-
-        const slice = hours.filter(
-            (hour) => (
-                hour.hour >= from &&
-                hour.hour <= to
-            )
-        );
-
-        upsertChart("hour", "chart-hour", {
-            type: "line",
-
-            data: {
-                labels: slice.map(
-                    (hour) => (
-                        String(hour.hour).padStart(2, "0") +
-                        ":00"
-                    )
-                ),
-
-                datasets: [{
-                    label: "ยอดขาย (บาท)",
-
-                    data: slice.map(
-                        (hour) => hour.total
-                    ),
-
-                    borderColor: "#d9480f",
-                    backgroundColor: "rgba(217, 72, 15, 0.15)",
-                    fill: true,
-                    tension: 0.3,
-                    pointRadius: 3
-                }]
-            },
-
-            options: {
-                maintainAspectRatio: false,
-
-                plugins: {
-                    legend: {
-                        display: false
-                    },
-
-                    tooltip: {
-                        callbacks: {
-                            label: (context) => (
-                                " " + money(context.parsed.y)
-                            )
-                        }
-                    }
-                },
-
-                scales: {
-                    y: {
-                        beginAtZero: true,
-
-                        ticks: {
-                            callback: (value) => "฿" + value
-                        }
-                    }
-                }
-            }
-        });
+        setHTML('chart-trend-data', data.sales_trend.map(day => `<tr><th scope="row">${esc(day.date)}</th><td>${money(day.total)}</td></tr>`).join(''));
+        setHTML('chart-hour-data', data.sales_by_hour.map(hour => `<tr><th scope="row">${String(hour.hour).padStart(2, '0')}:00</th><td>${money(hour.total)}</td></tr>`).join(''));
+        drawBars('chart-trend', data.sales_trend, day => new Date(day.date + 'T00:00:00+07:00').toLocaleDateString('th-TH', { day: 'numeric', month: 'short', timeZone: 'Asia/Bangkok' }));
+        const soldHours = data.sales_by_hour.filter(hour => hour.total > 0).map(hour => hour.hour);
+        const from = Math.min(8, ...soldHours), to = Math.max(21, ...soldHours);
+        drawBars('chart-hour', data.sales_by_hour.filter(hour => hour.hour >= from && hour.hour <= to), hour => String(hour.hour).padStart(2, '0'));
     }
 
     // ---------- เปิดปิดขายเมนู ----------
 
-    function switchHTML(id, available) {
+    function switchHTML(id, available, name) {
         const checked = available ? "checked" : "";
         const label = available ? "เปิดขาย" : "ของหมด";
 
@@ -1434,7 +1228,7 @@
                     type="checkbox"
                     data-item="${id}"
                     ${checked}
-                    aria-label="เปิดขายเมนูนี้"
+                    aria-label="เปิดขาย ${esc(name)}"
                 >
 
                 <span class="track"></span>
@@ -1466,7 +1260,8 @@
         if (known) {
             controlHTML = switchHTML(
                 dish.id,
-                available
+                available,
+                dish.name
             );
         }
 
@@ -1513,7 +1308,7 @@
                     </div>
                 </div>
 
-                ${switchHTML(menu.id, menu.available)}
+                ${switchHTML(menu.id, menu.available, menu.name)}
             </li>
         `;
     }
@@ -1576,6 +1371,7 @@
         const wanted = input.checked;
 
         pendingToggles++;
+        input.disabled = true;
 
         try {
             const response = await fetch(
@@ -1597,19 +1393,16 @@
                 throw new Error(response.status);
             }
         } catch (error) {
-            console.error(
-                "บันทึกสถานะเมนูไม่สำเร็จ",
-                error
-            );
 
             input.checked = !wanted;
 
-            alert(
+            notify(
                 "บันทึกสถานะเมนูไม่สำเร็จ " +
                 "กรุณาลองอีกครั้ง"
             );
         } finally {
             pendingToggles--;
+            input.disabled = false;
             refresh();
         }
     }
@@ -1635,12 +1428,18 @@
         $("live-text").textContent = text;
     }
 
+    let refreshInFlight = false;
     async function refresh() {
+        if (refreshInFlight) return;
+        refreshInFlight = true;
+        $('refresh-dashboard').disabled = true;
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 12000);
         try {
             const response = await fetch(
                 "/admin/dashboard/data",
                 {
-                    cache: "no-store"
+                    cache: "no-store", signal: controller.signal
                 }
             );
 
@@ -1662,6 +1461,7 @@
 
             renderMetrics(data);
             renderTables(data);
+            $("table-grid").setAttribute("aria-busy", "false");
             renderTransactions(data);
             renderCharts(data);
             renderStock(data);
@@ -1673,7 +1473,7 @@
                         weekday: "long",
                         day: "numeric",
                         month: "long",
-                        year: "numeric"
+                        year: "numeric", timeZone: "Asia/Bangkok"
                     }
                 )
             );
@@ -1681,10 +1481,11 @@
             setStatus(
                 true,
                 "อัปเดตล่าสุด " +
-                new Date().toLocaleTimeString("th-TH") +
+                new Date().toLocaleTimeString("th-TH", { timeZone: "Asia/Bangkok" }) +
                 " · รีเฟรชอัตโนมัติทุก 10 วินาที"
             );
         } catch (error) {
+            if ($('table-grid').querySelector('.dash-skeleton')) setHTML('table-grid', '<p class="empty">ยังโหลดข้อมูลโต๊ะไม่ได้<br>กดอัปเดตข้อมูลเพื่อลองอีกครั้ง</p>');
             $("dash-error").hidden = false;
 
             $("dash-error").textContent = (
@@ -1696,13 +1497,20 @@
                 false,
                 "เชื่อมต่อไม่ได้ กำลังลองใหม่..."
             );
+        } finally {
+            clearTimeout(timeout);
+            refreshInFlight = false;
+            $('refresh-dashboard').disabled = false;
+            $('table-grid').setAttribute('aria-busy', 'false');
         }
     }
 
+    $('refresh-dashboard').addEventListener('click', refresh);
+    if (location.hash === '#all-menu') $('all-menu').open = true;
     refresh();
-    setInterval(refresh, REFRESH_MS);
+    const refreshTimer = setInterval(() => { if (!document.hidden) refresh(); }, REFRESH_MS);
+    window.addEventListener('pagehide', () => clearInterval(refreshTimer), { once: true });
 })();
 </script>
 
-</body>
-</html>
+{% endblock %}

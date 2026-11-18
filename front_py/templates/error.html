@@ -1,0 +1,2 @@
+{% extends "base.html" %}
+{% block content %}<section class="empty-state glass-panel error-page"><p class="eyebrow">{{ status_code | default(500) }} · LET’S TRY AGAIN</p><h1>{{ title | default('ขออภัย เกิดข้อขัดข้อง') }}</h1><p>{{ message | default('กรุณาลองอีกครั้ง หรือติดต่อพนักงานเพื่อให้เราช่วยดูแล') }}</p><div class="inline-actions"><a class="button button-primary" href="/{{ table_query }}">กลับไปเลือกเมนู</a><a class="button button-secondary" href="/cart{{ table_query }}">ตรวจสอบตะกร้า</a></div></section>{% endblock %}

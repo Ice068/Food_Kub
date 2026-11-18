@@ -12,3 +12,11 @@ venv/
 firebase-credentials.json
 
 .food_kub_admin_key
+# Local runtime state and generated uploads
+.data/
+.local/
+.pytest_cache/
+.ruff_cache/
+.coverage
+front_py/static/images/menu-*.*
+!front_py/static/images/menu-placeholder.svg

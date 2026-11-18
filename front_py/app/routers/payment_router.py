@@ -8,10 +8,12 @@ from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 
 import httpx
-from fastapi import APIRouter, Depends, Form, Request
+from fastapi import APIRouter, Depends, Form, Request, HTTPException
 from fastapi.responses import JSONResponse, RedirectResponse
 
 from app.core.table_context import set_table_context, table_query
+from app.core.backend import backend_client
+from app.core.config import settings
 from app.services.cart_service import CartService
 from app.services.menu_service import MenuService
 from app.services.payment_service import PaymentService
@@ -221,6 +223,9 @@ class PaymentRouter:
     # ---------- หน้า Checkout ----------
 
     async def show_checkout(self, request: Request):
+        if (getattr(request.state, "table_id", None) is None
+                and not settings.DEMO_MODE and self.cart_service.get_bill_items(request)):
+            raise HTTPException(409, "กรุณาสแกน QR ประจำโต๊ะก่อนชำระเงิน เพื่อให้พนักงานตรวจสอบบิลได้")
         early_response = await self._checkout_early_response(
             request
         )
@@ -346,8 +351,11 @@ class PaymentRouter:
         self._attempts = {
             key: value
             for key, value in self._attempts.items()
-            if value.get("context") or value["expires"] > now
+            if value["expires"] > now
         }
+        active_scopes = {attempt["scope"] for attempt in self._attempts.values()}
+        self._locks = {scope: lock for scope, lock in self._locks.items()
+                       if scope in active_scopes or lock.locked()}
 
     def _create_checkout_attempt(self, owner, scope, bill):
         items, total, shared_ids, shared_paid = bill
@@ -671,7 +679,7 @@ class PaymentRouter:
                 new_items,
             )
 
-            async with httpx.AsyncClient(
+            async with backend_client(
                 timeout=5.0
             ) as client:
                 response = await client.get(

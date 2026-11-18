@@ -1,4 +1,6 @@
-from fastapi import APIRouter
+import secrets
+from fastapi import APIRouter, Header, HTTPException
+from app.core.admin_auth import admin_api_key
 from pydantic import BaseModel, Field
 
 from app.services.table_settings_service import (
@@ -33,8 +35,10 @@ def get_table_settings():
 
 
 @router.put("")
-def save_table_settings(payload: TableCountPayload):
+def save_table_settings(payload: TableCountPayload, x_food_kub_key: str | None = Header(None)):
     """บันทึกจำนวนโต๊ะของร้านลง Firestore"""
+    if not x_food_kub_key or not secrets.compare_digest(x_food_kub_key, admin_api_key()):
+        raise HTTPException(401, "Admin access required")
     count = table_settings.set_count(payload.table_count)
 
     return {
