@@ -1,3 +1,5 @@
+import logging
+
 import httpx
 from fastapi import APIRouter, Depends, Form, Request
 
@@ -43,7 +45,11 @@ class MenuRouter:
             items = self.discovery.prepare_items(menu_items)
             return items, ""
 
-        except httpx.HTTPError:
+        except httpx.HTTPError as exc:
+            status = exc.response.status_code if isinstance(exc, httpx.HTTPStatusError) else None
+            logging.getLogger(__name__).warning(
+                "Menu backend unavailable (error=%s, status=%s)", type(exc).__name__, status
+            )
             return [], (
                 "โหลดเมนูไม่สำเร็จ "
                 "กรุณาตรวจสอบว่าเซิร์ฟเวอร์อาหารเปิดอยู่ แล้วลองใหม่"

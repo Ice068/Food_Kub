@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import httpx
 from fastapi import FastAPI, Request
@@ -46,6 +47,21 @@ class Application:
         self._mount_static()
         self._include_routers()
         self._register_error_handlers()
+        self.app.add_api_route(
+            "/healthz", self.healthcheck, methods=["GET", "HEAD"], include_in_schema=False
+        )
+
+    async def healthcheck(self) -> JSONResponse:
+        """Report readiness only while the menu dependency is usable."""
+        try:
+            await asyncio.wait_for(self.menu_service.get_all(), timeout=3.0)
+        except Exception:
+            # Dependency failures and invalid upstream payloads are unavailable.
+            # Never expose upstream URLs, exception messages, or credentials.
+            return JSONResponse(
+                {"status": "unavailable"}, status_code=503, headers={"Cache-Control": "no-store"}
+            )
+        return JSONResponse({"status": "ok"}, headers={"Cache-Control": "no-store"})
 
     def _register_error_handlers(self):
         def error_response(request: Request, status: int, message: str):

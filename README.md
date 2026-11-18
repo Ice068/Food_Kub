@@ -31,6 +31,37 @@ python -m uvicorn main:app --app-dir front_py --host 127.0.0.1 --port 8001
 แล้วกดยืนยันรับเงินในแดชบอร์ด ระบบจะไม่ถือว่าการสร้าง QR เป็นหลักฐานว่าได้รับเงินแล้ว
 การยืนยันเงินจริงจากผู้ให้บริการธนาคารยังต้องเชื่อมต่อกับระบบของร้าน
 
+### Deploy branch `kit` บน Render
+
+สร้าง Web Service ที่ใช้ Python โดยเลือก branch `kit`, เว้น Root Directory ว่าง,
+ตั้ง Build Command เป็น `pip install -r requirements.txt` และ Start Command เป็น `bash start_render.sh`
+ใน Settings ตั้ง Health Check Path เป็น `/healthz` เพื่อให้ตรวจสอบการอ่านเมนูจาก Backend ด้วย
+การสร้าง service ผ่านหน้าเว็บต้องตั้งค่าต่าง ๆ เอง; `render.yaml` ใช้กับการสร้างผ่าน Blueprint
+
+ก่อน deploy ให้ไปที่ Environment → Secret Files → Add Secret File:
+
+- Filename: `firebase-credentials.json`
+- Contents: เนื้อหา JSON ทั้งไฟล์ของ Firebase service account ของโปรเจกต์นี้
+- กด Save Changes เพื่อ redeploy; แอปรองรับไฟล์ที่ `/etc/secrets/firebase-credentials.json` อยู่แล้ว
+
+อีกวิธีคือกำหนด Environment Variable `FIREBASE_CREDENTIALS_JSON` เป็นเนื้อหา JSON ทั้งไฟล์
+เลือกใช้วิธีใดวิธีหนึ่ง และห้าม commit ไฟล์ credentials หรือวางค่าลับใน log/chat
+ตั้ง `FOOD_KUB_ADMIN_PASSWORD`, `FOOD_KUB_SESSION_SECRET` และ `FOOD_KUB_COOKIE_SECURE=1`
+สำหรับการใช้งานจริงด้วย
+
+หากพบ `FileNotFoundError ... firebase-credentials.json` ตามด้วยหน้า `/` ตอบ `503`
+สาเหตุคือ Backend ไม่มี credentials บน Render แม้ CSS/JS ยังโหลดได้
+สคริปต์เริ่มระบบจะรอจน Backend อ่านเมนูได้ก่อนเปิด Frontend
+และหยุด service พร้อมแสดง error หาก process ใดหยุดทำงาน
+การเพิ่ม credentials ยังจำเป็น; สคริปต์ไม่สลับไปใช้ข้อมูลทดลองโดยอัตโนมัติ
+
+หากต้องการเฉพาะเว็บทดลอง ให้ตั้ง `FOOD_KUB_DEMO=1` โดยไม่ต้องตั้ง Firebase
+ข้อมูล SQLite ของโหมดทดลองบน Render ที่ไม่มี persistent disk จะหายเมื่อ redeploy/restart
+จึงไม่เหมาะสำหรับเก็บคำสั่งซื้อจริง
+
+อ้างอิง: [Render Secret Files](https://render.com/docs/configure-environment-variables#secret-files),
+[Render Health Checks](https://render.com/docs/health-checks)
+
 ### ตรวจสอบ
 
 ```powershell

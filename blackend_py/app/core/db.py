@@ -18,6 +18,14 @@ def _load_credential():
     if not os.path.exists(cred_path) and os.path.exists(render_secret):
         cred_path = render_secret
 
+    if not os.path.isfile(cred_path):
+        raise RuntimeError(
+            "Firebase credentials are missing. On Render, add a Secret File named "
+            "firebase-credentials.json under Environment, or set FIREBASE_CREDENTIALS_JSON "
+            "to the service account JSON, then redeploy. "
+            "For an isolated demo only, set FOOD_KUB_DEMO=1."
+        )
+
     return credentials.Certificate(cred_path)
 
 
